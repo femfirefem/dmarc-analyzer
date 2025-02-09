@@ -8,7 +8,7 @@
         "test:unit": "deno test --allow-net --allow-sys 'src/**/*.unit.test.*'",
         "test:e2e": "deno test --allow-net --allow-sys 'src/**/*.e2e.test.*'",
         "test:watch": "deno test --allow-net --allow-sys --watch",
-        "test:ci": "deno test --allow-net --allow-sys --reporter=junit --junit-path= backend-test-results.xml",
+        "test:ci": "deno test --allow-net --allow-sys --reporter=junit --junit-path=backend-test-results.xml",
         "lint": "deno lint",
         "format": "deno fmt",
         "build": "deno compile --output dmarc-analyzer --allow-net --allow-sys src/main.ts",
