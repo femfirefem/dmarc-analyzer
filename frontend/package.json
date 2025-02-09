@@ -20,10 +20,8 @@
 		"docker:test:e2e": "docker run -t --rm --ipc=host --user pwuser --security-opt seccomp=seccomp_profile.json $(docker build --target e2e-test -q -f Dockerfile ..)",
 		"docker:test": "npm run docker:test:unit && npm run docker:test:e2e"
 	},
-	"dependencies": {
-		"@types/node": "^22.13.1"
-	},
 	"devDependencies": {
+		"@types/node": "^22.13.1",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@playwright/test": "^1.49.1",
