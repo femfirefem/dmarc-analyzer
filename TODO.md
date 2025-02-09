@@ -4,13 +4,13 @@
 
 ### Backend Core (Priority)
 - [ ] Set up SMTP server infrastructure
-  - [x] Implement basic SMTP server in `backend/smtp/server.ts`
-  - [x] Create email handling logic in `backend/smtp/handlers.ts`
-  - [ ] Add DMARC report parsing functionality
-    - [ ] Implement XML parsing for aggregate reports
-    - [ ] Add gzip/zip extraction for compressed reports
-    - [ ] Create report validation logic
-    - [ ] Add error handling for malformed reports
+  - [x] Implement basic SMTP server in `backend/src/smtp/server.ts`
+  - [x] Create email handling logic in `backend/src/smtp/handlers.ts`
+  - [x] Add DMARC report parsing functionality
+    - [x] Implement XML parsing for aggregate reports
+    - [x] Add gzip/zip extraction for compressed reports
+    - [x] Create report validation logic
+    - [x] Add error handling for malformed reports
   - [ ] Add email filtering for DMARC reports
     - [ ] Validate email headers
     - [ ] Check attachment types

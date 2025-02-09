@@ -21,13 +21,13 @@ RUN deno cache src/**/*.test.ts
 FROM test-base AS unit-test
 
 # Run unit tests (excluding e2e-test files)
-CMD ["test", "--allow-net", "--allow-sys", "**/*.unit.test.*"]
+CMD ["test", "--allow-net", "--allow-sys", "--allow-env", "**/*.unit.test.*"]
 
 # E2E test stage
 FROM test-base AS e2e-test
 
 # Run e2e tests only
-CMD ["test", "--allow-net", "--allow-sys", "**/*.e2e.test.*"]
+CMD ["test", "--allow-net", "--allow-sys", "--allow-env", "**/*.e2e.test.*"]
 
 FROM builder AS compile
 
@@ -35,7 +35,7 @@ FROM builder AS compile
 RUN deno cache src/main.ts
 
 # Compile the code
-RUN deno compile --output /app/dmarc-analyzer --allow-net --allow-sys src/main.ts
+RUN deno compile --output /app/dmarc-analyzer --allow-net --allow-sys --allow-env src/main.ts
 
 # Production stage
 #FROM denoland/deno:distroless-${DENO_VERSION}
@@ -59,5 +59,5 @@ USER nonroot
 EXPOSE 25 3000
 
 # Run the server
-# CMD ["run", "--cached-only", "--allow-net", "--allow-sys", "src/main.ts"]
+# CMD ["run", "--cached-only", "--allow-net", "--allow-sys", "--allow-env", "src/main.ts"]
 CMD ["./dmarc-analyzer"]

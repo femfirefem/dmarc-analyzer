@@ -5,6 +5,7 @@ import { Buffer } from "node:buffer";
 import { gzipString } from "../../utils/compression.ts";
 import { parseEmail } from "../../mime/helpers.ts";
 import { createEMailWithReport } from "../../utils/test_utils.ts";
+import { setLoggerLevel } from "../../utils/logger.ts";
 
 Deno.test("parseReportAttachment", async (t) => {
   await t.step("should handle gzip by content-type", async () => {
@@ -50,6 +51,7 @@ Deno.test("parseReportAttachment", async (t) => {
   });
 
   await t.step("should reject unsupported types", async () => {
+    setLoggerLevel("CRITICAL");
     await assertRejects(
       async () => {
         await parseReportAttachments([{
@@ -61,6 +63,7 @@ Deno.test("parseReportAttachment", async (t) => {
       Error,
       "Unsupported attachment type"
     );
+    setLoggerLevel("INFO");
   });
 });
 
@@ -179,10 +182,12 @@ Deno.test("parseEmail should handle invalid DMARC report", async () => {
 
   const email = await parseEmail(emailWithInvalidReport);
 
+  setLoggerLevel("CRITICAL");
   assertRejects(
     async () => await parseReportAttachments(email.attachments),
     Error,
     "Missing "
   );
+  setLoggerLevel("INFO");
 });
 

@@ -1,6 +1,7 @@
 import { simpleParser, type ParsedMail } from "mailparser";
 import { Buffer } from "node:buffer";
 import { getFirstXmlFromZip, gunzipAsString, isGzip, isZip } from "../utils/compression.ts";
+import { logger } from "../utils/logger.ts";
 
 export interface Attachment {
   content: Buffer;
@@ -39,40 +40,49 @@ export async function extractXmlFromAttachment(attachment: Attachment): Promise<
       attachment.filename?.endsWith('.gz') ||
       isGzip(data)
     ) {
-      // console.log('Processing as GZIP');
+      logger.debug('Processing as GZIP', {
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+      });
       xmlContent = gunzipAsString(data);
     } else if (
       attachment.contentType.includes('zip') ||
       attachment.filename?.endsWith('.zip') ||
       isZip(data)
     ) {
-      // console.log('Processing as ZIP');
+      logger.debug('Processing as ZIP', {
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+      });
       xmlContent = await getFirstXmlFromZip(data);
     } else if (
       attachment.contentType.includes('xml') ||
       attachment.filename?.endsWith('.xml')
     ) {
-      // console.log('Processing as plain XML');
+      logger.debug('Processing as plain XML', {
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+      });
       xmlContent = new TextDecoder().decode(data);
     } else {
       throw new Error(`Unsupported attachment type: ${attachment.contentType}`);
     }
 
     // Log the extracted content for now
-    // console.log('Extracted XML content:', {
-    //   filename: attachment.filename,
-    //   contentType: attachment.contentType,
-    //   preview: xmlContent.substring(0, 200) + '...'
-    // });
+    logger.debug('Extracted XML content:', {
+      filename: attachment.filename,
+      contentType: attachment.contentType,
+      preview: xmlContent.substring(0, 200) + '...'
+    });
     
     return xmlContent;
     
   } catch (error) {
-    // console.error('Error parsing report attachment:', {
-    //   filename: attachment.filename,
-    //   contentType: attachment.contentType,
-    //   error
-    // });
+    logger.error('Error parsing report attachment:', {
+      filename: attachment.filename,
+      contentType: attachment.contentType,
+      error
+    });
     throw new Error(`Failed to extract XML from attachment: ${error instanceof Error ? error.message : error}`);
   }
 };

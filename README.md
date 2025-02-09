@@ -27,15 +27,32 @@ DmarcAnalyzer is a tool that analyzes DMARC records and provides a report on the
 - PicoCSS (styling)
 - Chart.js (graphical representation)
 
+## Requirements
+
+- Deno
+- Node.js
+- npm
+
 ## Installation
 
 1. Clone the repository
-2. Run `deno install`
+2. Run `npm install`
 
-## Usage
+## Development Servers
 
-1. Run `deno run --allow-net --allow-read --allow-env src/full_server.ts`
+1. Run `npm run dev` to start the development servers
 2. Open the web interface at `http://localhost:5173`
+3. SMTP server will be running on port 52525
+4. Web API server will be running on port 3000
+
+## Docker Containers
+
+1. Run `npm run docker:build` to build the docker images
+2. Run `npm run docker:up` to start the docker containers
+3. Open the web interface at `http://localhost:5173`
+4. SMTP server will be running on port 25
+5. Web API server will be running on port 3000
+6. PostgreSQL database will be running on port 5432
 
 ## Contributing
 

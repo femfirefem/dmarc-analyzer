@@ -2,8 +2,8 @@ import { assertExists } from "@std/assert";
 import { DmarcSMTPServer } from "./server.ts";
 import { createTransport } from "nodemailer";
 import { createTestDmarcReport } from "./test_utils.ts";
-import { encodeBase64 } from "@std/encoding/base64";
 import { gzipString } from "../utils/compression.ts";
+import { setLoggerLevel } from "../utils/logger.ts";
 
 const TEST_PORT = 52525; // Using a non-privileged port for testing
 const TEST_HOST = "localhost";
@@ -40,28 +40,20 @@ Deno.test({
 
       await client.verify();
 
-      const testEmail = `From: reporter@example.com
-To: dmarc-reports@yourdomain.com
-Subject: Report Domain: example.com
-Content-Type: multipart/mixed; boundary="boundary"
-
---boundary
-Content-Type: text/plain
-
-DMARC Report for example.com
---boundary
-Content-Type: application/gzip
-Content-Transfer-Encoding: base64
-Filename: report.xml.gz
-
-${encodeBase64(gzipString(createTestDmarcReport("example.com")))}
---boundary--`;
-
+      setLoggerLevel("ERROR");
       const result = await client.sendMail({
         from: "reporter@example.com",
         to: ["dmarc-reports@yourdomain.com"],
-        data: testEmail,
+        subject: "Report Domain: example.com",
+        text: "DMARC Report for example.com",
+        attachments: [
+          {
+            filename: "report.xml.gz",
+            content: gzipString(createTestDmarcReport("example.com")),
+          },
+        ],
       });
+      setLoggerLevel("INFO");
 
       assertExists(result);
       client.close();

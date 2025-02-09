@@ -2,6 +2,7 @@ import { assertEquals, assertRejects } from "@std/assert";
 import { gzipString, gunzipAsString, isGzip, isZip, getFirstXmlFromZip } from "./compression.ts";
 import { configure, Uint8ArrayReader, Uint8ArrayWriter, ZipWriter } from "@zip-js/zip-js";
 import { createTestZipWithXml } from "./test_utils.ts";
+import { setLoggerLevel } from "./logger.ts";
 
 Deno.test("gzipString/gunzipAsString", () => {
   const original = "test content";
@@ -38,6 +39,7 @@ Deno.test("getFirstXmlFromZip", async (t) => {
     const zipWriter = new ZipWriter(new Uint8ArrayWriter());
     const emptyZip = await zipWriter.close();
 
+    setLoggerLevel("CRITICAL");
     await assertRejects(
       async () => {
         await getFirstXmlFromZip(new Uint8Array(emptyZip));
@@ -45,6 +47,7 @@ Deno.test("getFirstXmlFromZip", async (t) => {
       Error,
       "ZIP archive is empty"
     );
+    setLoggerLevel("INFO");
   });
 
   await t.step("should throw when no XML files found", async () => {
@@ -54,6 +57,7 @@ Deno.test("getFirstXmlFromZip", async (t) => {
     await zipWriter.add("test.txt", new Uint8ArrayReader(textBuffer));
     const zipData = await zipWriter.close();
 
+    setLoggerLevel("CRITICAL");
     await assertRejects(
       async () => {
         await getFirstXmlFromZip(new Uint8Array(zipData));
@@ -61,5 +65,6 @@ Deno.test("getFirstXmlFromZip", async (t) => {
       Error,
       "No XML file found in ZIP archive"
     );
+    setLoggerLevel("INFO");
   });
 });

@@ -3,6 +3,7 @@ import { assertEquals, assertRejects } from "@std/assert";
 import { Buffer } from "node:buffer";
 import { parseEmail, extractXmlFromAttachment, maybeIsReportAttachment } from "./helpers.ts";
 import { gzipString } from "../utils/compression.ts";
+import { setLoggerLevel } from "../utils/logger.ts";
 
 Deno.test("parseEmail - parses email content", async () => {
   const emailContent = `From: sender@example.com
@@ -70,9 +71,11 @@ Deno.test("extractXmlFromAttachment - rejects invalid content type", async () =>
     filename: "report.pdf"
   };
 
+  setLoggerLevel("CRITICAL");
   await assertRejects(
     () => extractXmlFromAttachment(attachment),
     Error,
     "Unsupported attachment type"
   );
+  setLoggerLevel("INFO");
 });
