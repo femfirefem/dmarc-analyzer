@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "25:25"
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://dmarc:dmarc_password@db:5432/dmarc_analyzer
+      - NODE_ENV=production
+    depends_on:
+      - db
+    networks:
+      - dmarc-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - BACKEND_URL=http://backend:3000
+    depends_on:
+      - backend
+    networks:
+      - dmarc-network
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=dmarc
+      - POSTGRES_PASSWORD=dmarc_password
+      - POSTGRES_DB=dmarc_analyzer
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dmarc-network
+
+volumes:
+  postgres_data:
+
+networks:
+  dmarc-network:
+    driver: bridge 

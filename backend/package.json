@@ -1,0 +1,22 @@
+{
+    "name": "dmarc-analyzer-backend",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "dev": "deno run --allow-net --allow-sys --watch src/main.ts --smtpPort 52525",
+        "test": "deno test --allow-net --allow-sys",
+        "test:unit": "deno test --allow-net --allow-sys 'src/**/*.unit.test.*'",
+        "test:e2e": "deno test --allow-net --allow-sys 'src/**/*.e2e.test.*'",
+        "test:watch": "deno test --allow-net --allow-sys --watch",
+        "lint": "deno lint",
+        "format": "deno fmt",
+        "build": "deno compile --output dmarc-analyzer --allow-net --allow-sys src/main.ts",
+        "start": "deno run src/main.ts",
+        "install": "deno install",
+        "docker:run": "docker run -it --rm -p 3000:3000 -p 25:25 $(docker build -q -f Dockerfile ..)",
+        "docker:compile": "docker build --target compile -f Dockerfile ..",
+        "docker:test:unit": "docker run -t --rm $(docker build --target unit-test -q -f Dockerfile ..)",
+        "docker:test:e2e": "docker run -t --rm $(docker build --target e2e-test -q -f Dockerfile ..)",
+        "docker:test": "npm run docker:test:unit && npm run docker:test:e2e"
+    }
+}
