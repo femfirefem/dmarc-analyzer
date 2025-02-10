@@ -8,7 +8,7 @@ import { IDmarcReportRepository, CreateDmarcReportData } from "../database/repos
 export class DmarcReportService {
   private repository: IDmarcReportRepository;
 
-  constructor(repository: IDmarcReportRepository | undefined) {
+  constructor(repository: IDmarcReportRepository | undefined = undefined) {
     this.repository = repository ?? (
       Deno.env.get("MOCK_DB")?.toLowerCase() === "true" ?
       new MockDmarcReportRepository() : new DmarcReportRepository()
