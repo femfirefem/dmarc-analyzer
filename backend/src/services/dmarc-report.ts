@@ -8,9 +8,11 @@ import { IDmarcReportRepository, CreateDmarcReportData } from "../database/repos
 export class DmarcReportService {
   private repository: IDmarcReportRepository;
 
-  constructor() {
-    this.repository = Deno.env.get("MOCK_DB")?.toLowerCase() === "true" ?
-      new MockDmarcReportRepository() : new DmarcReportRepository();
+  constructor(repository: IDmarcReportRepository | undefined) {
+    this.repository = repository ?? (
+      Deno.env.get("MOCK_DB")?.toLowerCase() === "true" ?
+      new MockDmarcReportRepository() : new DmarcReportRepository()
+    );
   }
 
   async processReport(report: DmarcReport, mailDate: Date): Promise<void> {
@@ -63,7 +65,7 @@ export class DmarcReportService {
         orgName: data.orgName
       });
     } catch (error) {
-      logger.error('Failed to process DMARC report:', error);
+      logger.error(`Failed to process DMARC report: ${error instanceof Error ? error.message : 'Unknown error'}`, error);
       throw error;
     }
   }

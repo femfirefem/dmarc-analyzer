@@ -39,10 +39,10 @@ export function handleIncomingMail(
       const parsedEmail = await parseEmail(fullEmail);
       logger.debug('Parsed email:', {
         sessionId: session.id,
+        messageId: parsedEmail.messageId,
         from: parsedEmail.from.text,
         to: parsedEmail.to.text,
         date: parsedEmail.date,
-        messageId: parsedEmail.messageId,
         subject: parsedEmail.subject,
         text: parsedEmail.text,
         html: parsedEmail.html,
@@ -58,6 +58,7 @@ export function handleIncomingMail(
       if (reportAttachments.length === 0) {
         logger.warn('No DMARC report attachments found in email', {
           sessionId: session.id,
+          messageId: parsedEmail.messageId,
           remoteAddress: session.remoteAddress,
           hostname: session.clientHostname,
           from: session.envelope?.mailFrom,
@@ -73,6 +74,7 @@ export function handleIncomingMail(
           const report = parseAndValidateDmarcReport(xml);
           logger.info('Successfully parsed DMARC report:', {
             sessionId: session.id,
+            messageId: parsedEmail.messageId,
             reportMetadata: {
               orgName: report.reportMetadata.orgName,
               reportId: report.reportMetadata.reportId,
@@ -92,8 +94,10 @@ export function handleIncomingMail(
           // - Trigger analysis pipeline
           // - Send notifications if needed
         } catch (error) {
-          logger.error('Failed to process DMARC report attachment:', {
+          logger.error(`Failed to process DMARC report attachment: ${error instanceof Error ? error.message : 'Unknown error'}`, {
             sessionId: session.id,
+            messageId: parsedEmail.messageId,
+            attachmentIndex: reportAttachments.indexOf(attachment),
             error,
           });
           // Continue processing other attachments
