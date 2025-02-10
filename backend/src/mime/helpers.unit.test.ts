@@ -77,5 +77,5 @@ Deno.test("extractXmlFromAttachment - rejects invalid content type", async () =>
     Error,
     "Unsupported attachment type"
   );
-  setLoggerLevel("INFO");
+  setLoggerLevel("ERROR");
 });

@@ -47,7 +47,7 @@ Deno.test("getFirstXmlFromZip", async (t) => {
       Error,
       "ZIP archive is empty"
     );
-    setLoggerLevel("INFO");
+    setLoggerLevel("ERROR");
   });
 
   await t.step("should throw when no XML files found", async () => {
@@ -65,6 +65,6 @@ Deno.test("getFirstXmlFromZip", async (t) => {
       Error,
       "No XML file found in ZIP archive"
     );
-    setLoggerLevel("INFO");
+    setLoggerLevel("ERROR");
   });
 });

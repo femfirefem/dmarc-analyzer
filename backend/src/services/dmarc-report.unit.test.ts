@@ -53,6 +53,7 @@ const mockReport: DmarcReport = {
 };
 
 Deno.test("DmarcReportService - processReport", async (t) => {
+  setLoggerLevel("ERROR"); // Reduce log noise while running tests
   await t.step("successfully processes new report", async () => {
     const repository = new MockDmarcReportRepository();
     const service = new DmarcReportService(repository);
@@ -100,6 +101,6 @@ Deno.test("DmarcReportService - processReport", async (t) => {
       Error,
       "Database error"
     );
-    setLoggerLevel("INFO");
+    setLoggerLevel("ERROR");
   });
 });

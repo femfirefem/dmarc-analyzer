@@ -1,4 +1,4 @@
-export const createTestDmarcReport = (domain: string): string => {
+export const createTestDmarcReport = (domain: string, begin: Date|undefined = undefined, end: Date|undefined = undefined): string => {
   return `<?xml version="1.0" encoding="UTF-8" ?>
 <feedback>
   <version>1.0</version>
@@ -7,8 +7,8 @@ export const createTestDmarcReport = (domain: string): string => {
     <email>reporter@example.com</email>
     <report_id>2024-test-001</report_id>
     <date_range>
-      <begin>1234567890</begin>
-      <end>1234654290</end>
+      <begin>${begin ? begin.getTime()/1000 : 1234567890}</begin>
+      <end>${end ? end.getTime()/1000 : 1234654290}</end>
     </date_range>
   </report_metadata>
   <policy_published>

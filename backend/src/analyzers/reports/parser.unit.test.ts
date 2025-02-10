@@ -63,7 +63,7 @@ Deno.test("parseReportAttachment", async (t) => {
       Error,
       "Unsupported attachment type"
     );
-    setLoggerLevel("INFO");
+    setLoggerLevel("ERROR");
   });
 });
 
@@ -188,6 +188,6 @@ Deno.test("parseEmail should handle invalid DMARC report", async () => {
     Error,
     "Missing "
   );
-  setLoggerLevel("INFO");
+  setLoggerLevel("ERROR");
 });
 
