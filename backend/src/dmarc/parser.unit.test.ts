@@ -63,44 +63,44 @@ Deno.test("parseDmarcReport", async (t) => {
     const report = parseAndValidateDmarcReport(sampleReport);
     
     // Test report metadata
-    assertEquals(report.report_metadata.org_name, "Google");
-    assertEquals(report.report_metadata.email, "noreply-dmarc-support@google.com");
-    assertEquals(report.report_metadata.extra_contact_info, "https://support.google.com/a/answer/2466580");
+    assertEquals(report.reportMetadata.orgName, "Google");
+    assertEquals(report.reportMetadata.email, "noreply-dmarc-support@google.com");
+    assertEquals(report.reportMetadata.extraContactInfo, "https://support.google.com/a/answer/2466580");
     
     // Test policy published
-    assertEquals(report.policy_published.domain, "example.com");
-    assertEquals(report.policy_published.adkim, "r");
-    assertEquals(report.policy_published.p, "none");
-    assertEquals(report.policy_published.pct, 100);
+    assertEquals(report.policyPublished.domain, "example.com");
+    assertEquals(report.policyPublished.adkim, "r");
+    assertEquals(report.policyPublished.p, "none");
+    assertEquals(report.policyPublished.pct, 100);
     
     // Test records
     assertEquals(report.records.length, 1);
     const record = report.records[0];
     
     // Test row data
-    assertEquals(record.row.source_ip, "203.0.113.1");
+    assertEquals(record.row.sourceIp, "203.0.113.1");
     assertEquals(record.row.count, 2);
-    assertEquals(record.row.policy_evaluated.disposition, "none");
-    assertEquals(record.row.policy_evaluated.dkim, "pass");
-    assertEquals(record.row.policy_evaluated.spf, "pass");
+    assertEquals(record.row.policyEvaluated.disposition, "none");
+    assertEquals(record.row.policyEvaluated.dkim, "pass");
+    assertEquals(record.row.policyEvaluated.spf, "pass");
     
     // Test policy override reason
-    assertEquals(record.row.policy_evaluated.reasons?.[0].type, "trusted_forwarder");
-    assertEquals(record.row.policy_evaluated.reasons?.[0].comment, "Known good sender");
+    assertEquals(record.row.policyEvaluated.reasons?.[0].type, "trusted_forwarder");
+    assertEquals(record.row.policyEvaluated.reasons?.[0].comment, "Known good sender");
     
     // Test identifiers
-    assertEquals(record.identifiers.header_from, "example.com");
-    assertEquals(record.identifiers.envelope_from, "example.com");
-    assertEquals(record.identifiers.envelope_to, "recipient.com");
+    assertEquals(record.identifiers.headerFrom, "example.com");
+    assertEquals(record.identifiers.envelopeFrom, "example.com");
+    assertEquals(record.identifiers.envelopeTo, "recipient.com");
     
     // Test auth results
-    const dkim = record.auth_results.dkim?.[0];
+    const dkim = record.authResults.dkim?.[0];
     assertEquals(dkim?.domain, "example.com");
     assertEquals(dkim?.selector, "default");
     assertEquals(dkim?.result, "pass");
-    assertEquals(dkim?.human_result, "pass (ok)");
+    assertEquals(dkim?.humanResult, "pass (ok)");
     
-    const spf = record.auth_results.spf[0];
+    const spf = record.authResults.spf[0];
     assertEquals(spf.domain, "example.com");
     assertEquals(spf.scope, "mfrom");
     assertEquals(spf.result, "pass");
@@ -149,9 +149,9 @@ Deno.test("parseDmarcReport", async (t) => {
       </feedback>`;
     
     const report = parseAndValidateDmarcReport(minimalReport);
-    assertEquals(report.policy_published.adkim, undefined);
-    assertEquals(report.records[0].auth_results.dkim, undefined);
-    assertEquals(report.records[0].identifiers.envelope_to, undefined);
+    assertEquals(report.policyPublished.adkim, undefined);
+    assertEquals(report.records[0].authResults.dkim, undefined);
+    assertEquals(report.records[0].identifiers.envelopeTo, undefined);
   });
 
   await t.step("should throw on missing required fields", () => {

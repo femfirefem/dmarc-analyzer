@@ -1,5 +1,6 @@
 import { SMTPServer } from "smtp-server";
 import { handleIncomingMail } from "./handlers.ts";
+import { logger } from "../utils/logger.ts";
 
 export class DmarcSMTPServer {
   private server: SMTPServer;
@@ -20,11 +21,11 @@ export class DmarcSMTPServer {
     return new Promise((resolve, reject) => {
       try {
         this.server.listen(this.port, this.host, () => {
-          console.log(`SMTP Server listening on ${this.host}:${this.port}`);
+          logger.info(`SMTP Server listening on ${this.host}:${this.port}`);
           resolve();
         });
       } catch (error) {
-        console.error('Failed to start SMTP server:', error);
+        logger.error('Failed to start SMTP server:', error);
         reject(error);
       }
     });
@@ -34,11 +35,11 @@ export class DmarcSMTPServer {
     return new Promise((resolve, reject) => {
       try {
         this.server.close(() => {
-          console.log(`SMTP Server on ${this.host}:${this.port} closed`);
+          logger.info(`SMTP Server on ${this.host}:${this.port} closed`);
           resolve();
         });
       } catch (error) {
-        console.error('Failed to stop SMTP server:', error);
+        logger.error('Failed to stop SMTP server:', error);
         reject(error);
       }
     });

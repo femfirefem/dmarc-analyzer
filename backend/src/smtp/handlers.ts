@@ -2,6 +2,9 @@ import type { SMTPServerDataStream, SMTPServerSession } from "npm:@types/smtp-se
 import { parseEmail, getReportAttachments, extractXmlFromAttachment } from "../mime/helpers.ts";
 import { parseAndValidateDmarcReport } from "../dmarc/parser.ts";
 import { logger } from "../utils/logger.ts";
+import { DmarcReportService } from "../services/dmarc-report.ts";
+
+const reportService = new DmarcReportService();
 
 export function handleIncomingMail(
   stream: SMTPServerDataStream, 
@@ -71,23 +74,25 @@ export function handleIncomingMail(
           logger.info('Successfully parsed DMARC report:', {
             sessionId: session.id,
             reportMetadata: {
-              orgName: report.report_metadata.org_name,
-              reportId: report.report_metadata.report_id,
+              orgName: report.reportMetadata.orgName,
+              reportId: report.reportMetadata.reportId,
               dateRange: {
-                begin: report.report_metadata.date_range.begin,
-                end: report.report_metadata.date_range.end,
+                begin: report.reportMetadata.dateRange.begin,
+                end: report.reportMetadata.dateRange.end,
               }
             },
-            policyPublished: report.policy_published,
+            policyPublished: report.policyPublished,
             recordCount: report.records.length,
           });
           
+          // Save report to database
+          await reportService.processReport(report, parsedEmail.date || new Date());
+
           // TODO: Next steps
-          // 1. Save report to database
-          // 2. Trigger analysis pipeline
-          // 3. Send notifications if needed
+          // - Trigger analysis pipeline
+          // - Send notifications if needed
         } catch (error) {
-          logger.error('Failed to parse DMARC report attachment:', {
+          logger.error('Failed to process DMARC report attachment:', {
             sessionId: session.id,
             error,
           });

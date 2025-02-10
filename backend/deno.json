@@ -12,6 +12,7 @@
     "mailparser": "npm:mailparser@^3.7.2",
     "smtp-server": "npm:smtp-server@^3.13.6",
     "fast-xml-parser": "npm:fast-xml-parser@^4.5.1",
+    "@prisma/client": "npm:@prisma/client@^6.3.1",
     "@types/nodemailer": "npm:@types/nodemailer@^6.4.17",
     "@types/mailparser": "npm:@types/mailparser@^3.4.5",
     "@types/smtp-server": "npm:@types/smtp-server@^3.5.10",

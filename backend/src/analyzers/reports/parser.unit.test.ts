@@ -76,16 +76,16 @@ Deno.test("parseEmail should parse a valid DMARC report", async () => {
 
   assertEquals(dmarcReport, {
     version: 1.0,
-    report_metadata: {
-      org_name: "Test Reporter",
-      report_id: "2024-test-001",
-      date_range: {
+    reportMetadata: {
+      orgName: "Test Reporter",
+      reportId: "2024-test-001",
+      dateRange: {
         begin: new Date("2009-02-13T23:31:30.000Z"),
         end: new Date("2009-02-14T23:31:30.000Z")
       },
       email: "reporter@example.com"
     },
-    policy_published: {
+    policyPublished: {
       domain: "example.com",
       adkim: "r",
       aspf: "r",
@@ -96,20 +96,20 @@ Deno.test("parseEmail should parse a valid DMARC report", async () => {
     records: [
       {
         row: {
-          source_ip: "192.168.1.1",
+          sourceIp: "192.168.1.1",
           count: 10,
-          policy_evaluated: {
+          policyEvaluated: {
             disposition: "none",
             dkim: "pass",
             spf: "pass"
           }
         },
         identifiers: {
-          envelope_to: "example.com",
-          envelope_from: "example.com",
-          header_from: "example.com"
+          envelopeTo: "example.com",
+          envelopeFrom: "example.com",
+          headerFrom: "example.com"
         },
-        auth_results: {
+        authResults: {
           dkim: [{
             domain: "example.com",
             result: "pass"

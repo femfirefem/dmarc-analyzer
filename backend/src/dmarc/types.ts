@@ -27,11 +27,11 @@ export interface DateRange {
 }
 
 export interface DmarcReportMetadata {
-  org_name: string;
+  orgName: string;
   email: string;
-  extra_contact_info?: string;
-  report_id: string;
-  date_range: DateRange;
+  extraContactInfo?: string;
+  reportId: string;
+  dateRange: DateRange;
   errors?: string[];
 }
 
@@ -56,7 +56,7 @@ export interface DKIMAuthResult {
   domain: string;
   selector?: string;
   result: DKIMResultType;
-  human_result?: string;
+  humanResult?: string;
 }
 
 export interface SPFAuthResult {
@@ -71,26 +71,26 @@ export interface AuthResults {
 }
 
 export interface Identifiers {
-  envelope_to?: string;
-  envelope_from?: string;
-  header_from: string;
+  envelopeTo?: string;
+  envelopeFrom?: string;
+  headerFrom: string;
 }
 
 export interface Row {
-  source_ip: string;
+  sourceIp: string;
   count: number;
-  policy_evaluated: PolicyEvaluated;
+  policyEvaluated: PolicyEvaluated;
 }
 
 export interface DmarcRecord {
   row: Row;
   identifiers: Identifiers;
-  auth_results: AuthResults;
+  authResults: AuthResults;
 }
 
 export interface DmarcReport {
   version: number;
-  report_metadata: DmarcReportMetadata;
-  policy_published: DmarcPolicyPublished;
+  reportMetadata: DmarcReportMetadata;
+  policyPublished: DmarcPolicyPublished;
   records: DmarcRecord[];
 }
