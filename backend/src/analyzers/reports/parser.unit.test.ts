@@ -69,7 +69,7 @@ Deno.test("parseReportAttachment", async (t) => {
 
 Deno.test("parseReportAttachments should parse a valid DMARC report", async () => {
   // Create test DMARC report
-  const report = createTestDmarcReport("example.com");
+  const report = createTestDmarcReport("example.com", "2024-test-001");
   const rawEmail = createEMailWithReport(report);
   const parsedEmail = await simpleParser(rawEmail);
   const dmarcReport = await parseReportAttachments(parsedEmail.attachments);

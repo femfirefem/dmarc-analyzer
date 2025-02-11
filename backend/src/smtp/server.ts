@@ -173,6 +173,7 @@ export class DmarcSMTPServer {
         transmissionType: session.transmissionType,
         error,
       });
+      if (error instanceof CustomSMTPError) throw error;
       throw new CustomSMTPError('Failed to process email');
     }
   }
@@ -253,7 +254,7 @@ export class DmarcSMTPServer {
     try {
       const xml = await extractXmlFromAttachment(attachment);
       const report = parseAndValidateDmarcReport(xml);
-      logger.info('Successfully parsed DMARC report:', {
+      logger.info(`Successfully parsed DMARC report ${report.reportMetadata.reportId}`, {
         sessionId: session.id,
         messageId: parsedEmail.messageId,
         reportMetadata: {
@@ -269,12 +270,26 @@ export class DmarcSMTPServer {
       });
 
       const subject = parseDmarcReportSubject(parsedEmail.subject);
+      if (!subject) {
+        logger.debug('DMARC report subject validation failed', {
+          sessionId: session.id,
+          messageId: parsedEmail.messageId,
+          subject: parsedEmail.subject,
+        });
+      }
       if (this.strictSubject) {
         if (!subject) throw new CustomSMTPError('Invalid DMARC report email subject');
         this.validateSubject(subject, report);
       }
 
       const parsedFilename: DmarcReportFilename | null = parseDmarcReportFilename(attachment.filename ?? '');
+      if (!parsedFilename) {
+        logger.debug('DMARC report filename validation failed', {
+          sessionId: session.id,
+          messageId: parsedEmail.messageId,
+          filename: attachment.filename,
+        });
+      }
       if (this.strictFilename) {
         if (!parsedFilename) throw new CustomSMTPError('Invalid DMARC report filename');
         this.validateFilename(parsedFilename, subject, report);
@@ -294,6 +309,7 @@ export class DmarcSMTPServer {
         attachmentIndex: parsedEmail.attachments.indexOf(attachment),
         error,
       });
+      if (error instanceof CustomSMTPError) throw error;
       return false;
     }
   }

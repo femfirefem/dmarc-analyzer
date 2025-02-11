@@ -59,12 +59,12 @@ Deno.test({
       const result = await client.sendMail({
         from: "reporter@example.com",
         to: ["dmarc-reports@yourdomain.com"],
-        subject: "Report Domain: example.com Submitter: reporter.example.com Report-ID: <2024-test-001>",
+        subject: "Report Domain: example.com Submitter: reporter.example.com Report-ID: 2024-test-001",
         text: "DMARC Report for example.com",
         attachments: [
           {
             filename: `reporter.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
-            content: gzipString(createTestDmarcReport("example.com", reportBeginDate, reportEndDate)),
+            content: gzipString(createTestDmarcReport("example.com", "2024-test-001", reportBeginDate, reportEndDate)),
           },
         ],
       });
@@ -84,6 +84,7 @@ Deno.test({
 
       await client.verify();
 
+      setLoggerLevel("CRITICAL");
       await assertRejects(
         () => client.sendMail({
           from: "reporter@example.com", 
@@ -93,13 +94,14 @@ Deno.test({
           attachments: [
             {
               filename: `reporter.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
-              content: gzipString(createTestDmarcReport("example.com", reportBeginDate, reportEndDate)),
+              content: gzipString(createTestDmarcReport("example.com", "2024-test-002", reportBeginDate, reportEndDate)),
             },
           ],
         }),
         Error,
         "Invalid DMARC report email subject"
       );
+      setLoggerLevel("ERROR");
 
       client.close();
     });
@@ -114,23 +116,24 @@ Deno.test({
 
       await client.verify();
 
+      setLoggerLevel("CRITICAL");
       await assertRejects(
         () => client.sendMail({
           from: "reporter@example.com",
           to: ["dmarc-reports@yourdomain.com"],
-          subject: "Report Domain: example.com Submitter: reporter.example.com Report-ID: <2024-test-002>",
+          subject: "Report Domain: example.com Submitter: reporter.example.com Report-ID: 2024-test-003",
           text: "DMARC Report",
           attachments: [
             {
               filename: "invalid_filename.xml.gz",
-              content: gzipString(createTestDmarcReport("example.com", reportBeginDate, reportEndDate)),
+              content: gzipString(createTestDmarcReport("example.com", "2024-test-003", reportBeginDate, reportEndDate)),
             },
           ],
         }),
         Error,
         "Invalid DMARC report filename"
       );
-
+      setLoggerLevel("ERROR");
       client.close();
     });
 
@@ -204,7 +207,7 @@ Deno.test({
             attachments: [
               {
                 filename: "report.xml.gz",
-                content: gzipString(createTestDmarcReport("example.com", new Date(), new Date())),
+                content: gzipString(createTestDmarcReport("example.com", "2024-test-004", new Date(), new Date())),
               },
             ],
           }),

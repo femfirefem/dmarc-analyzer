@@ -27,10 +27,10 @@ if (import.meta.main) {
   setLoggerLevel(logLevel);
   setLogObjects(flags.logObjects);
   
-  const server = new DmarcSMTPServer(
-    flags.smtpPort ? parseInt(flags.smtpPort) : DEFAULT_SMTP_PORT,
-    flags.smtpHost ?? flags.host ?? DEFAULT_HOST
-  );
+  const server = new DmarcSMTPServer({
+    port: flags.smtpPort ? parseInt(flags.smtpPort) : DEFAULT_SMTP_PORT,
+    host: flags.smtpHost ?? flags.host ?? DEFAULT_HOST
+  });
 
   server.start().catch((error) => {
     logger.error("Failed to start DMARC SMTP server:", error);

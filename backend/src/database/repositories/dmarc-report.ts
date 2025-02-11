@@ -42,7 +42,11 @@ export class DmarcReportRepository implements IDmarcReportRepository {
           throw new Error('Report already exists');
         }
       }
-      logger.error('Failed to create DMARC report:', error);
+      logger.error(`Failed to create DMARC report: ${error instanceof Error ? error.message : error}`, {
+        reportId: data.reportId,
+        orgName: data.orgName,
+        error,
+      });
       throw error;
     }
   }
