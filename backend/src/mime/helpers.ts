@@ -1,4 +1,4 @@
-import { simpleParser, type ParsedMail } from "mailparser";
+import { type ParsedMail } from "mailparser";
 import { Buffer } from "node:buffer";
 import { getFirstXmlFromZip, gunzipAsString, isGzip, isZip } from "../utils/compression.ts";
 import { logger } from "../utils/logger.ts";
@@ -8,10 +8,6 @@ export interface Attachment {
   contentType: string;
   filename?: string;
 }
-
-export async function parseEmail(emailContent: string): Promise<ParsedMail> {
-  return await simpleParser(emailContent) as ParsedMail;
-};
 
 export function maybeIsReportAttachment(attachment: Attachment): boolean {
   return !!(

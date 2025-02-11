@@ -1,27 +1,9 @@
 // TODO: Add unit tests for mime/helpers.ts
 import { assertEquals, assertRejects } from "@std/assert";
 import { Buffer } from "node:buffer";
-import { parseEmail, extractXmlFromAttachment, maybeIsReportAttachment } from "./helpers.ts";
+import { extractXmlFromAttachment, maybeIsReportAttachment } from "./helpers.ts";
 import { gzipString } from "../utils/compression.ts";
 import { setLoggerLevel } from "../utils/logger.ts";
-
-Deno.test("parseEmail - parses email content", async () => {
-  const emailContent = `From: sender@example.com
-To: recipient@example.com
-Subject: Test Email
-Content-Type: multipart/mixed; boundary="boundary"
-
---boundary
-Content-Type: text/plain
-
-Test email body
---boundary--`;
-
-  const result = await parseEmail(emailContent);
-  assertEquals(result.from?.text, "sender@example.com");
-  assertEquals((result.to instanceof Array ? result.to[0] : result.to)?.text, "recipient@example.com"); 
-  assertEquals(result.subject, "Test Email");
-});
 
 Deno.test("getReportAttachments - filters report attachments", () => {
   const allAttachments = [

@@ -3,9 +3,9 @@ import { parseReportAttachments } from "./parser.ts";
 import { createTestDmarcReport } from "../../smtp/test_utils.ts";
 import { Buffer } from "node:buffer";
 import { gzipString } from "../../utils/compression.ts";
-import { parseEmail } from "../../mime/helpers.ts";
 import { createEMailWithReport } from "../../utils/test_utils.ts";
 import { setLoggerLevel } from "../../utils/logger.ts";
+import { simpleParser } from "mailparser";
 
 Deno.test("parseReportAttachment", async (t) => {
   await t.step("should handle gzip by content-type", async () => {
@@ -67,11 +67,11 @@ Deno.test("parseReportAttachment", async (t) => {
   });
 });
 
-Deno.test("parseEmail should parse a valid DMARC report", async () => {
+Deno.test("parseReportAttachments should parse a valid DMARC report", async () => {
   // Create test DMARC report
   const report = createTestDmarcReport("example.com");
   const rawEmail = createEMailWithReport(report);
-  const parsedEmail = await parseEmail(rawEmail);
+  const parsedEmail = await simpleParser(rawEmail);
   const dmarcReport = await parseReportAttachments(parsedEmail.attachments);
 
   assertEquals(dmarcReport, {
@@ -132,7 +132,7 @@ Content-Type: text/plain
 
 DMARC Report for example.com
 --boundary--`;
-  const email = await parseEmail(emailWithoutReport);
+  const email = await simpleParser(emailWithoutReport);
   const dmarcReport = await parseReportAttachments(email.attachments);
   assertEquals(dmarcReport, null);
 });
@@ -180,7 +180,7 @@ Deno.test("parseEmail should handle invalid DMARC report", async () => {
 
   const emailWithInvalidReport = createEMailWithReport(invalidDmarcReportXml);
 
-  const email = await parseEmail(emailWithInvalidReport);
+  const email = await simpleParser(emailWithInvalidReport);
 
   setLoggerLevel("CRITICAL");
   assertRejects(

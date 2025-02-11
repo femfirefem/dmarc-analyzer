@@ -1,25 +1,50 @@
 import { SMTPServer } from "smtp-server";
 import { logger } from "../utils/logger.ts";
 import { DmarcReportService } from "../services/dmarc-report.ts";
-import type { SMTPServerDataStream, SMTPServerSession } from "npm:@types/smtp-server@3.5.10";
-import { parseEmail, getReportAttachments, extractXmlFromAttachment } from "../mime/helpers.ts";
+import type { SMTPServerDataStream, SMTPServerOptions, SMTPServerSession } from "npm:@types/smtp-server@3.5.10";
+import { getReportAttachments, extractXmlFromAttachment, Attachment } from "../mime/helpers.ts";
 import { parseAndValidateDmarcReport } from "../dmarc/parser.ts";
+import { simpleParser, type ParsedMail } from "mailparser";
+import { authenticate } from "mailauth";
+import { DmarcSMTPServerOptions } from "./types.ts";
+import { DmarcEmailSubject, DmarcReportFilename, parseDmarcReportFilename, parseDmarcReportSubject } from "../dmarc/helpers.ts";
+import { DmarcReport } from "../dmarc/types.ts";
+
+class CustomSMTPError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CustomSMTPError';
+  }
+}
 
 export class DmarcSMTPServer {
   private server: SMTPServer;
   private port: number;
   private host: string;
+  private strictSubject: boolean;
+  private strictFilename: boolean;
+  private validateDmarc: boolean;
+  private dmarcReject: boolean;
   private reportService: DmarcReportService;
-
-  constructor(port: number = 25, host: string = "0.0.0.0", reportService: DmarcReportService | undefined = undefined) {
-    this.server = new SMTPServer({
+  
+  constructor(options: DmarcSMTPServerOptions) {
+    const smtpServerOptions: SMTPServerOptions = {
       onData: this.onData.bind(this),
       authOptional: true,
-      disabledCommands: ['AUTH', 'STARTTLS'], // DMARC reports don't need authentication
-    });
-    this.port = port;
-    this.host = host;
-    this.reportService = reportService ?? new DmarcReportService();
+      disabledCommands: ['AUTH'],
+      closeTimeout: options.closeTimeout ?? 30000
+    };
+    if (!options.tls) {
+      smtpServerOptions.disabledCommands?.push('STARTTLS');
+    }
+    this.server = new SMTPServer(smtpServerOptions);
+    this.port = options.port ?? 25;
+    this.host = options.host ?? "0.0.0.0";
+    this.strictSubject = options.strictSubject ?? true;
+    this.strictFilename = options.strictFilename ?? true;
+    this.validateDmarc = options.validateDmarc ?? true;
+    this.dmarcReject = options.dmarcReject ?? true;
+    this.reportService = options.reportService ?? new DmarcReportService();
   }
 
   start(): Promise<void> {
@@ -79,7 +104,7 @@ export class DmarcSMTPServer {
           new Uint8Array(chunks.flatMap(chunk => Array.from(chunk)))
         );
 
-        await this.onMailData(session, fullEmail);
+        await this.onDataComplete(session, fullEmail);
 
         callback();
       } catch (error) {
@@ -89,7 +114,7 @@ export class DmarcSMTPServer {
           transmissionType: session.transmissionType,
           error,
         });
-        callback(new Error('Failed to process email'));
+        callback(error instanceof CustomSMTPError ? error : new Error('Failed to process email'));
       }
     });
   
@@ -103,28 +128,29 @@ export class DmarcSMTPServer {
     });
   } 
 
-  async onMailData(session: SMTPServerSession, fullEmail: string): Promise<void> {
+  async onDataComplete(session: SMTPServerSession, data: string): Promise<void> {
+    if (this.validateDmarc) {
+      await this.authenticateMessage(session, data, this.dmarcReject);
+    }
+
     try {
-      // Parse the email content
-      const parsedEmail = await parseEmail(fullEmail);
-      logger.debug('Parsed email:', {
-        sessionId: session.id,
-        messageId: parsedEmail.messageId,
-        from: parsedEmail.from.text,
-        to: parsedEmail.to.text,
-        date: parsedEmail.date,
-        subject: parsedEmail.subject,
-        text: parsedEmail.text,
-        html: parsedEmail.html,
-        totalAttachmentCount: parsedEmail.attachments.length
-      });
+      const parsedEmail = await this.parseMessage(session, data);
+
+      const subject = parseDmarcReportSubject(parsedEmail.subject);
+      if (!subject) {
+        if (this.strictSubject) throw new CustomSMTPError('Invalid DMARC report email subject');
+        logger.warn('Invalid DMARC report email subject', {
+          sessionId: session.id,
+          messageId: parsedEmail.messageId,
+        });
+      }
 
       // Get report attachments
       const reportAttachments = getReportAttachments(parsedEmail);
       logger.debug(`Got ${reportAttachments.length} report attachments`, {
         sessionId: session.id
       });
-      
+
       if (reportAttachments.length === 0) {
         logger.warn('No DMARC report attachments found in email', {
           sessionId: session.id,
@@ -136,41 +162,9 @@ export class DmarcSMTPServer {
         return;
       }
 
-      // Process each report attachment
       for (const attachment of reportAttachments) {
-        try {
-          const xml = await extractXmlFromAttachment(attachment);
-          const report = parseAndValidateDmarcReport(xml);
-          logger.info('Successfully parsed DMARC report:', {
-            sessionId: session.id,
-            messageId: parsedEmail.messageId,
-            reportMetadata: {
-              orgName: report.reportMetadata.orgName,
-              reportId: report.reportMetadata.reportId,
-              dateRange: {
-                begin: report.reportMetadata.dateRange.begin,
-                end: report.reportMetadata.dateRange.end,
-              }
-            },
-            policyPublished: report.policyPublished,
-            recordCount: report.records.length,
-          });
-          
-          // Save report to database
-          await this.reportService.processReport(report, parsedEmail.date || new Date());
-
-          // TODO: Next steps
-          // - Trigger analysis pipeline
-          // - Send notifications if needed
-        } catch (error) {
-          logger.error(`Failed to process DMARC report attachment: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-            sessionId: session.id,
-            messageId: parsedEmail.messageId,
-            attachmentIndex: reportAttachments.indexOf(attachment),
-            error,
-          });
-          // Continue processing other attachments
-        }
+        await this.processReportAttachment(session, parsedEmail, attachment);
+        // Continue processing other attachments
       }
     } catch (error) {
       logger.error(`Error parsing email: ${error instanceof Error ? error.message : error}`, {
@@ -179,8 +173,157 @@ export class DmarcSMTPServer {
         transmissionType: session.transmissionType,
         error,
       });
-      throw new Error('Failed to process email');
+      throw new CustomSMTPError('Failed to process email');
     }
   }
-  
+
+  private async authenticateMessage(session: SMTPServerSession, data: string, throwOnReject: boolean = false) {
+    const messageOptions = {
+      ip: session.remoteAddress,
+      helo: session.clientHostname,
+      sender: session.envelope?.mailFrom ? session.envelope.mailFrom.address : undefined,
+    };
+
+    try {
+      const mailauthResult = await authenticate(data, messageOptions);
+
+      // Handle DMARC sender validation
+      const spfResult = mailauthResult.spf.status.result;
+      const dkimResult = mailauthResult.dkim.results.map(
+        (result: { status: { result: string } }) => result.status.result).join(', ');
+      const dmarcResult = mailauthResult.dmarc.status.result;
+      const dmarcPolicy = mailauthResult.dmarc.policy;
+
+      if (dmarcResult === 'fail' && dmarcPolicy === 'reject') {
+        logger.warn('DMARC sender validation failed, rejecting email', {
+          sessionId: session.id,
+          remoteAddress: session.remoteAddress,
+          hostname: session.clientHostname,
+          from: session.envelope?.mailFrom,
+          authResultHeaders: mailauthResult.headers,
+        });
+        if (throwOnReject) throw new CustomSMTPError('Rejected by DMARC validation policy');
+      }
+
+      logger.debug(`DMARC sender validation (spf=${spfResult}, dkim=${dkimResult}, dmarc=${dmarcResult})`, {
+        sessionId: session.id,
+        ...messageOptions,
+        result: mailauthResult,
+      });
+
+      return mailauthResult;
+    } catch (error) {
+      logger.error(`DMARC sender validation error: ${error instanceof Error ? error.message : error}`, {
+        sessionId: session.id,
+        ...messageOptions,
+        error,
+      });
+      if (error instanceof CustomSMTPError) throw error;
+      throw new CustomSMTPError('DMARC sender validation failed');
+    }
+  }
+
+  async parseMessage(session: SMTPServerSession, message: string): Promise<ParsedMail> {
+    try {
+      const parsedEmail = await simpleParser(message) as ParsedMail;
+      logger.debug('Parsed email:', {
+        sessionId: session.id,
+        messageId: parsedEmail.messageId,
+        from: parsedEmail.from.text,
+        to: parsedEmail.to.text,
+        date: parsedEmail.date,
+        subject: parsedEmail.subject,
+        text: parsedEmail.text,
+        html: parsedEmail.html,
+        totalAttachmentCount: parsedEmail.attachments.length
+      });
+      return parsedEmail;
+    } catch (error) {
+      logger.error(`Error parsing email: ${error instanceof Error ? error.message : error}`, {
+        sessionId: session.id,
+        clientHostname: session.clientHostname,
+        transmissionType: session.transmissionType,
+        error,
+      });
+      throw new CustomSMTPError('Failed to parse email');
+    }
+  }
+
+  async processReportAttachment(session: SMTPServerSession, parsedEmail: ParsedMail, attachment: Attachment): Promise<boolean> {
+    try {
+      const xml = await extractXmlFromAttachment(attachment);
+      const report = parseAndValidateDmarcReport(xml);
+      logger.info('Successfully parsed DMARC report:', {
+        sessionId: session.id,
+        messageId: parsedEmail.messageId,
+        reportMetadata: {
+          orgName: report.reportMetadata.orgName,
+          reportId: report.reportMetadata.reportId,
+          dateRange: {
+            begin: report.reportMetadata.dateRange.begin,
+            end: report.reportMetadata.dateRange.end,
+          }
+        },
+        policyPublished: report.policyPublished,
+        recordCount: report.records.length,
+      });
+
+      const subject = parseDmarcReportSubject(parsedEmail.subject);
+      if (this.strictSubject) {
+        if (!subject) throw new CustomSMTPError('Invalid DMARC report email subject');
+        this.validateSubject(subject, report);
+      }
+
+      const parsedFilename: DmarcReportFilename | null = parseDmarcReportFilename(attachment.filename ?? '');
+      if (this.strictFilename) {
+        if (!parsedFilename) throw new CustomSMTPError('Invalid DMARC report filename');
+        this.validateFilename(parsedFilename, subject, report);
+      }
+
+      // Save report to database
+      await this.reportService.processReport(report, parsedEmail.date || new Date());
+
+      // TODO: Next steps
+      // - Trigger analysis pipeline
+      // - Send notifications if needed
+      return true;
+    } catch (error) {
+      logger.error(`Failed to process DMARC report attachment: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+        sessionId: session.id,
+        messageId: parsedEmail.messageId,
+        attachmentIndex: parsedEmail.attachments.indexOf(attachment),
+        error,
+      });
+      return false;
+    }
+  }
+
+  validateSubject(subject: DmarcEmailSubject, report: DmarcReport): void {
+    // Check subject domain against policyPublished.domain
+    if (subject.domain !== report.policyPublished.domain) {
+      throw new CustomSMTPError('DMARC report domain does not match email subject');
+    }
+    // Check reportId against report.reportMetadata.reportId
+    if (subject.reportId !== report.reportMetadata.reportId) {
+      throw new CustomSMTPError('DMARC report ID does not match email subject');
+    }
+  }
+
+  validateFilename(filename: DmarcReportFilename, subject: DmarcEmailSubject | null, report: DmarcReport): void {
+    // Check subject submitter against attachment first part of filename (if subject was passed)
+    if (subject && subject.submitter !== filename.submitter) {
+      throw new CustomSMTPError('DMARC report submitter does not match email subject');
+    }
+
+    // Check file name domain against report.policyPublished.domain
+    if (filename.domain !== report.policyPublished.domain) {
+      throw new CustomSMTPError('Report domain in attachment filename does not match email subject');
+    }
+
+    // Check file name date range against report date range
+    const dateRange = report.reportMetadata.dateRange;
+    if (filename.begin < dateRange.begin.getTime()/1000 || filename.end > dateRange.end.getTime()/1000) {
+      throw new CustomSMTPError('Report date range does not match attachment filename');
+    }
+  }
 }
