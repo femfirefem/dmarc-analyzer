@@ -9,6 +9,8 @@ import { authenticate } from "mailauth";
 import { DmarcSMTPServerOptions } from "./types.ts";
 import { DmarcEmailSubject, DmarcReportFilename, parseDmarcReportFilename, parseDmarcReportSubject } from "../dmarc/helpers.ts";
 import { DmarcReport } from "../dmarc/types.ts";
+import { KnownReporterService } from "../services/known-reporter.ts";
+import { UnknownReporterPolicy } from "./types.ts";
 
 class CustomSMTPError extends Error {
   constructor(message: string) {
@@ -26,6 +28,8 @@ export class DmarcSMTPServer {
   private validateDmarc: boolean;
   private dmarcReject: boolean;
   private reportService: DmarcReportService;
+  private reporterService: KnownReporterService;
+  private unknownReporterPolicy: UnknownReporterPolicy;
   
   constructor(options: DmarcSMTPServerOptions) {
     const smtpServerOptions: SMTPServerOptions = {
@@ -45,6 +49,8 @@ export class DmarcSMTPServer {
     this.validateDmarc = options.validateDmarc ?? true;
     this.dmarcReject = options.dmarcReject ?? true;
     this.reportService = options.reportService ?? new DmarcReportService();
+    this.reporterService = options.reporterService ?? new KnownReporterService();
+    this.unknownReporterPolicy = options.unknownReporterPolicy ?? UnknownReporterPolicy.ALLOW;
   }
 
   start(): Promise<void> {
@@ -224,6 +230,45 @@ export class DmarcSMTPServer {
     }
   }
 
+  private async validateReporter(session: SMTPServerSession, dmarcReport: DmarcReport) {
+    const orgEmail = dmarcReport.reportMetadata.email;
+    const isValidReporter = await this.reporterService.validateReporter(orgEmail);
+    
+    if (!isValidReporter) {
+      // Handle unknown/untrusted reporter based on policy
+      switch (this.unknownReporterPolicy) {
+        case UnknownReporterPolicy.REJECT:
+          logger.warn('Rejected email from untrusted DMARC reporter', {
+            sessionId: session.id,
+            orgEmail,
+            remoteAddress: session.remoteAddress,
+          });
+          throw new CustomSMTPError('Untrusted DMARC reporter');
+
+        case UnknownReporterPolicy.IGNORE:
+          logger.warn('Ignoring email from unknown DMARC reporter', {
+            sessionId: session.id,
+            orgEmail,
+            remoteAddress: session.remoteAddress,
+          });
+          break;
+
+        case UnknownReporterPolicy.ALLOW:
+          logger.info('Allowing email from unknown DMARC reporter', {
+            sessionId: session.id,
+            orgEmail,
+            remoteAddress: session.remoteAddress,
+          });
+          // Create reporter record with UNTRUSTED status
+          await this.reporterService.getOrCreateReporter(
+            orgEmail,
+            dmarcReport.reportMetadata.orgName
+          );
+          break;
+      }
+    }
+  }
+
   async parseMessage(session: SMTPServerSession, message: string): Promise<ParsedMail> {
     try {
       const parsedEmail = await simpleParser(message) as ParsedMail;
@@ -268,6 +313,18 @@ export class DmarcSMTPServer {
         policyPublished: report.policyPublished,
         recordCount: report.records.length,
       });
+
+      // Ensure session fromMail matches orgEmail
+      const fromMail = session.envelope?.mailFrom ? session.envelope.mailFrom.address : undefined;
+      console.log("fromMail", fromMail);
+      console.log("report.reportMetadata.email", report.reportMetadata.email);
+      if (fromMail !== report.reportMetadata.email) {
+        throw new CustomSMTPError('Sender does not match DMARC report email');
+      }
+
+      if (this.reporterService) {
+        await this.validateReporter(session, report);
+      }
 
       const subject = parseDmarcReportSubject(parsedEmail.subject);
       if (!subject) {

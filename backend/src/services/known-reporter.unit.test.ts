@@ -12,9 +12,9 @@ Deno.test("KnownReporterService", async (t) => {
       const repository = new MockKnownReporterRepository();
       const service = new KnownReporterService(repository);
 
-      const reporter = await service.getOrCreateReporter("test.com", "Test Org");
+      const reporter = await service.getOrCreateReporter("test@example.com", "Test Org");
 
-      assertEquals(reporter.domain, "test.com");
+      assertEquals(reporter.orgEmail, "test@example.com");
       assertEquals(reporter.orgName, "Test Org");
       assertEquals(reporter.trustLevel, "UNTRUSTED");
       assertEquals(reporter.status, "PENDING_REVIEW");
@@ -24,8 +24,8 @@ Deno.test("KnownReporterService", async (t) => {
       const repository = new MockKnownReporterRepository();
       const service = new KnownReporterService(repository);
 
-      const created = await service.getOrCreateReporter("test.com", "Test Org");
-      const found = await service.getOrCreateReporter("test.com", "Different Name");
+      const created = await service.getOrCreateReporter("test@example.com", "Test Org");
+      const found = await service.getOrCreateReporter("test@example.com", "Different Name");
 
       assertEquals(found.id, created.id);
       assertEquals(found.orgName, created.orgName); // Should not update existing name
@@ -102,11 +102,13 @@ Deno.test("KnownReporterService", async (t) => {
       const repository = new MockKnownReporterRepository();
       const service = new KnownReporterService(repository);
 
+      setLoggerLevel("CRITICAL");
       await assertRejects(
         () => service.updateReporter("unknown.com", { orgName: "Test" }),
         Error,
         "Reporter not found: unknown.com"
       );
+      setLoggerLevel("ERROR");
     });
   });
 
@@ -114,13 +116,13 @@ Deno.test("KnownReporterService", async (t) => {
     const repository = new MockKnownReporterRepository();
     const service = new KnownReporterService(repository);
 
-    await service.getOrCreateReporter("test1.com", "Test Org 1");
+    await service.getOrCreateReporter("test1@example.com", "Test Org 1");
     await new Promise(resolve => setTimeout(resolve, 1)); // Wait so lastSeen is not the same
-    await service.getOrCreateReporter("test2.com", "Test Org 2");
+    await service.getOrCreateReporter("test2@example.com", "Test Org 2");
 
     const reporters = await service.listReporters();
     assertEquals(reporters.length, 2);
-    assertEquals(reporters[0].domain, "test2.com"); // Should be sorted by lastSeen desc
-    assertEquals(reporters[1].domain, "test1.com");
+    assertEquals(reporters[0].orgEmail, "test2@example.com"); // Should be sorted by lastSeen desc
+    assertEquals(reporters[1].orgEmail, "test1@example.com");
   });
 }); 

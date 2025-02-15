@@ -1,11 +1,14 @@
 import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import { DmarcSMTPServer } from "./server.ts";
 import { createTransport } from "nodemailer";
-import { createTestDmarcReport } from "./test_utils.ts";
+import { createTestDmarcReport, createTestDmarcEmail } from "./test_utils.ts";
 import { gzipString } from "../utils/compression.ts";
 import { setLoggerLevel } from "../utils/logger.ts";
 import { DmarcReportService } from "../services/dmarc-report.ts";
 import { MockDmarcReportRepository } from "../database/repositories/mock-dmarc-report.ts";
+import { MockKnownReporterRepository } from "../database/repositories/mock-known-reporter.ts";
+import { KnownReporterService } from "../services/known-reporter.ts";
+import { UnknownReporterPolicy } from "./types.ts";
 
 const TEST_PORT = 52525; // Using a non-privileged port for testing
 const TEST_HOST = "localhost";
@@ -55,20 +58,14 @@ Deno.test({
 
       await client.verify();
 
-      setLoggerLevel("ERROR");
-      const result = await client.sendMail({
-        from: "reporter@example.com",
-        to: ["dmarc-reports@yourdomain.com"],
-        subject: "Report Domain: example.com Submitter: reporter.example.com Report-ID: 2024-test-001",
-        text: "DMARC Report for example.com",
-        attachments: [
-          {
-            filename: `reporter.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
-            content: gzipString(createTestDmarcReport("example.com", "2024-test-001", reportBeginDate, reportEndDate)),
-          },
-        ],
-      });
-      setLoggerLevel("ERROR");
+      const result = await client.sendMail(createTestDmarcEmail({
+        reporterEmail: "reporter@example.com",
+        reporterName: "Test Reporter",
+        domain: "example.com",
+        reportId: "2024-test-001",
+        begin: reportBeginDate,
+        end: reportEndDate
+      }));
 
       assertExists(result);
       client.close();
@@ -94,7 +91,14 @@ Deno.test({
           attachments: [
             {
               filename: `reporter.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
-              content: gzipString(createTestDmarcReport("example.com", "2024-test-002", reportBeginDate, reportEndDate)),
+              content: gzipString(createTestDmarcReport({
+                reporterEmail: "reporter@example.com",
+                reporterName: "Test Reporter",
+                domain: "example.com",
+                reportId: "2024-test-002",
+                begin: reportBeginDate,
+                end: reportEndDate
+              })),
             },
           ],
         }),
@@ -126,7 +130,14 @@ Deno.test({
           attachments: [
             {
               filename: "invalid_filename.xml.gz",
-              content: gzipString(createTestDmarcReport("example.com", "2024-test-003", reportBeginDate, reportEndDate)),
+              content: gzipString(createTestDmarcReport({
+                reporterEmail: "reporter@example.com",
+                reporterName: "Test Reporter",
+                domain: "example.com",
+                reportId: "2024-test-003",
+                begin: reportBeginDate,
+                end: reportEndDate
+              })),
             },
           ],
         }),
@@ -196,6 +207,9 @@ Deno.test({
       try {
         await client.verify();
 
+        const reportBeginDate = new Date("2023-01-01T00:00:00Z");
+        const reportEndDate = new Date("2023-01-02T00:00:00Z");
+
         setLoggerLevel("CRITICAL");
         // This should fail due to DMARC authentication
         await assertRejects(
@@ -206,8 +220,15 @@ Deno.test({
             text: "DMARC Report for example.com",
             attachments: [
               {
-                filename: "report.xml.gz",
-                content: gzipString(createTestDmarcReport("example.com", "2024-test-004", new Date(), new Date())),
+                filename: `invalid.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
+                content: gzipString(createTestDmarcReport({
+                  reporterEmail: "reporter@example.com",
+                  reporterName: "Test Reporter",
+                  domain: "example.com",
+                  reportId: "2024-test-004",
+                  begin: reportBeginDate,
+                  end: reportEndDate
+                })),
               },
             ],
           }),
@@ -226,4 +247,251 @@ Deno.test({
       }
     });
   },
+});
+
+Deno.test({
+  name: "SMTP Server Integration Tests with Reporter Validation",
+  ignore: Deno.env.get("CI") === "true", // Skip on CI
+  async fn(t) {
+    setLoggerLevel("ERROR");
+
+    await t.step("should reject email from untrusted reporter", async () => {
+      const reportRepository = new MockDmarcReportRepository();
+      const reportService = new DmarcReportService(reportRepository);
+      const reporterRepository = new MockKnownReporterRepository();
+      const reporterService = new KnownReporterService(reporterRepository);
+
+      const server = new DmarcSMTPServer({
+        port: TEST_PORT,
+        host: TEST_HOST,
+        closeTimeout: 100,
+        validateDmarc: false,
+        unknownReporterPolicy: UnknownReporterPolicy.REJECT,
+        reportService,
+        reporterService,
+      });
+
+      await server.start();
+
+      const client = createTransport({
+        host: TEST_HOST,
+        port: TEST_PORT,
+        secure: false
+      });
+
+      try {
+        await client.verify();
+
+        const reportBeginDate = new Date("2023-01-01T00:00:00Z");
+        const reportEndDate = new Date("2023-01-02T00:00:00Z");
+
+        setLoggerLevel("CRITICAL");
+        // This should fail due to untrusted reporter
+        await assertRejects(
+          () => client.sendMail({
+            from: "untrusted@example.com",
+            to: ["dmarc-reports@yourdomain.com"],
+            subject: "Report Domain: example.com Submitter: untrusted.example.com Report-ID: 2024-test-005",
+            text: "DMARC Report",
+            attachments: [
+              {
+                filename: `untrusted.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
+                content: gzipString(createTestDmarcReport({
+                  reporterEmail: "untrusted@example.com",
+                  reporterName: "Test Reporter",
+                  domain: "example.com",
+                  reportId: "2024-test-005",
+                  begin: reportBeginDate,
+                  end: reportEndDate
+                })),
+              },
+            ],
+          }),
+          Error,
+          "Untrusted DMARC reporter"
+        );
+        setLoggerLevel("ERROR");
+      } finally {
+        client.close();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await server.stop();
+      }
+    });
+
+    await t.step("should accept email from trusted reporter", async () => {
+      const reportRepository = new MockDmarcReportRepository();
+      const reportService = new DmarcReportService(reportRepository);
+      const reporterRepository = new MockKnownReporterRepository();
+      const reporterService = new KnownReporterService(reporterRepository);
+
+      // Create and verify a trusted reporter
+      await reporterService.getOrCreateReporter("google.com", "Google");
+      await reporterService.updateReporter("google.com", {
+        status: "ACTIVE",
+        trustLevel: "HIGH"
+      });
+
+      const server = new DmarcSMTPServer({
+        port: TEST_PORT,
+        host: TEST_HOST,
+        closeTimeout: 100,
+        validateDmarc: false,
+        reportService,
+        reporterService,
+      });
+
+      await server.start();
+
+      const client = createTransport({
+        host: TEST_HOST,
+        port: TEST_PORT,
+        secure: false
+      });
+
+      try {
+        await client.verify();
+
+        const reportBeginDate = new Date("2023-01-01T00:00:00Z");
+        const reportEndDate = new Date("2023-01-02T00:00:00Z");
+
+        // This should succeed with trusted reporter
+        await client.sendMail({
+          from: "dmarc-noreply@google.com",
+          to: ["dmarc-reports@yourdomain.com"],
+          subject: "Report Domain: example.com Submitter: google.com Report-ID: 2024-test-005",
+          text: "DMARC Report",
+          attachments: [
+            {
+              filename: `google.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
+              content: gzipString(createTestDmarcReport({
+                reporterEmail: "dmarc-noreply@google.com",
+                reporterName: "Test Reporter",
+                domain: "example.com",
+                reportId: "2024-test-005",
+                begin: reportBeginDate,
+                end: reportEndDate
+              })),
+            },
+          ],
+        });
+
+      } finally {
+        client.close();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await server.stop();
+      }
+    });
+
+    await t.step("should handle unknown reporters according to policy", async () => {
+      const reportRepository = new MockDmarcReportRepository();
+      const reportService = new DmarcReportService(reportRepository);
+      const reporterRepository = new MockKnownReporterRepository();
+      const reporterService = new KnownReporterService(reporterRepository);
+
+      // Test REJECT policy
+      const rejectServer = new DmarcSMTPServer({
+        port: TEST_PORT,
+        host: TEST_HOST,
+        closeTimeout: 100,
+        validateDmarc: false,
+        reportService,
+        reporterService,
+        unknownReporterPolicy: UnknownReporterPolicy.REJECT
+      });
+
+      await rejectServer.start();
+      try {
+        const client = createTransport({
+          host: TEST_HOST,
+          port: TEST_PORT,
+          secure: false
+        });
+
+        const reportBeginDate = new Date("2023-01-01T00:00:00Z");
+        const reportEndDate = new Date("2023-01-02T00:00:00Z");
+
+        setLoggerLevel("CRITICAL");
+        await assertRejects(
+          () => client.sendMail({
+            from: "unknown@example.com",
+            to: ["dmarc-reports@yourdomain.com"],
+            subject: "Report Domain: example.com Submitter: unknown.example.com Report-ID: 2024-test-005",
+            text: "DMARC Report",
+            attachments: [
+              {
+                filename: `unknown.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
+                content: gzipString(createTestDmarcReport({
+                  reporterEmail: "unknown@example.com",
+                  reporterName: "Test Reporter",
+                  domain: "example.com",
+                  reportId: "2024-test-005",
+                  begin: reportBeginDate,
+                  end: reportEndDate
+                })),
+              },
+            ],
+          }),
+          Error,
+          "Untrusted DMARC reporter"
+        );
+        setLoggerLevel("ERROR");
+
+        client.close();
+      } finally {
+        await rejectServer.stop();
+      }
+
+      // Test ALLOW policy
+      const allowServer = new DmarcSMTPServer({
+        port: TEST_PORT,
+        host: TEST_HOST,
+        closeTimeout: 100,
+        validateDmarc: false,
+        reportService,
+        reporterService,
+        unknownReporterPolicy: UnknownReporterPolicy.ALLOW
+      });
+
+      await allowServer.start();
+      try {
+        const client = createTransport({
+          host: TEST_HOST,
+          port: TEST_PORT,
+          secure: false
+        });
+
+        const reportBeginDate = new Date("2023-01-01T00:00:00Z");
+        const reportEndDate = new Date("2023-01-02T00:00:00Z");
+
+        // Should succeed and create reporter with LOW trust level
+        await client.sendMail({
+          from: "unknown@example.com",
+          to: ["dmarc-reports@yourdomain.com"],
+          subject: "Report Domain: example.com Submitter: unknown.example.com Report-ID: 2024-test-005",
+          text: "DMARC Report",
+          attachments: [
+            {
+              filename: `unknown.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
+              content: gzipString(createTestDmarcReport({
+                reporterEmail: "unknown@example.com",
+                reporterName: "Test Reporter",
+                domain: "example.com",
+                reportId: "2024-test-005",
+                begin: reportBeginDate,
+                end: reportEndDate
+              })),
+            },
+          ],
+        });
+
+        const reporter = await reporterRepository.findByOrgEmail("unknown@example.com");
+        assertEquals(reporter?.trustLevel, "UNTRUSTED");
+        assertEquals(reporter?.status, "PENDING_REVIEW");
+
+        client.close();
+      } finally {
+        await allowServer.stop();
+      }
+    });
+  }
 });

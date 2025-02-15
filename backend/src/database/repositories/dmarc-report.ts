@@ -1,11 +1,11 @@
-import { DmarcReport } from "@prisma/client";
+import { PrismaClient, DmarcReport } from "@prisma/client";
 import { getPrismaClient } from "../client.ts";
 import { logger } from "../../utils/logger.ts";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { CreateDmarcReportData, IDmarcReportRepository } from "./types.ts";
 
 export class DmarcReportRepository implements IDmarcReportRepository {
-  private prisma = getPrismaClient();
+  constructor(private prisma: PrismaClient = getPrismaClient()) {}
 
   async create(data: CreateDmarcReportData): Promise<DmarcReport> {
     try {

@@ -37,7 +37,7 @@ export interface CreateDmarcReportData {
 }
 
 export interface CreateKnownReporterData {
-  domain: string;
+  orgEmail: string;
   orgName: string;
   trustLevel?: ReporterTrustLevel;
   status?: ReporterStatus;
@@ -53,8 +53,8 @@ export interface UpdateKnownReporterData {
 
 export interface IKnownReporterRepository {
   create(data: CreateKnownReporterData): Promise<KnownReporter>;
-  findByDomain(domain: string): Promise<KnownReporter | null>;
-  update(domain: string, data: UpdateKnownReporterData): Promise<KnownReporter>;
-  updateLastSeen(domain: string): Promise<KnownReporter>;
+  findByOrgEmail(orgEmail: string): Promise<KnownReporter | null>;
+  update(orgEmail: string, data: UpdateKnownReporterData): Promise<KnownReporter>;
+  updateLastSeen(orgEmail: string): Promise<KnownReporter>;
   list(): Promise<KnownReporter[]>;
 }

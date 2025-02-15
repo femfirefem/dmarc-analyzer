@@ -7,7 +7,7 @@ export class MockKnownReporterRepository implements IKnownReporterRepository {
   create(data: CreateKnownReporterData): Promise<KnownReporter> {
     const reporter: KnownReporter = {
       id: Math.random().toString(),
-      domain: data.domain,
+      orgEmail: data.orgEmail,
       orgName: data.orgName,
       firstSeen: new Date(),
       lastSeen: new Date(),
@@ -22,13 +22,13 @@ export class MockKnownReporterRepository implements IKnownReporterRepository {
     return Promise.resolve(reporter);
   }
 
-  findByDomain(domain: string): Promise<KnownReporter | null> {
-    return Promise.resolve(this.reporters.find(r => r.domain === domain) ?? null);
+  findByOrgEmail(orgEmail: string): Promise<KnownReporter | null> {
+    return Promise.resolve(this.reporters.find(r => r.orgEmail === orgEmail) ?? null);
   }
 
-  async update(domain: string, data: UpdateKnownReporterData): Promise<KnownReporter> {
-    const reporter = await this.findByDomain(domain);
-    if (!reporter) throw new Error(`Reporter not found: ${domain}`);
+  async update(orgEmail: string, data: UpdateKnownReporterData): Promise<KnownReporter> {
+    const reporter = await this.findByOrgEmail(orgEmail);
+    if (!reporter) throw new Error(`Reporter not found: ${orgEmail}`);
 
     const updated = {
       ...reporter,
@@ -37,14 +37,14 @@ export class MockKnownReporterRepository implements IKnownReporterRepository {
     };
 
     this.reporters = this.reporters.map(r => 
-      r.domain === domain ? updated : r
+      r.orgEmail === orgEmail ? updated : r
     );
 
     return updated;
   }
 
-  async updateLastSeen(domain: string): Promise<KnownReporter> {
-    return await this.update(domain, {});
+  async updateLastSeen(orgEmail: string): Promise<KnownReporter> {
+    return await this.update(orgEmail, {});
   }
 
   list(): Promise<KnownReporter[]> {

@@ -1,8 +1,9 @@
 import { PrismaClient, KnownReporter } from "@prisma/client";
 import { CreateKnownReporterData, IKnownReporterRepository, UpdateKnownReporterData } from "./types.ts";
+import { getPrismaClient } from "../client.ts";
 
 export class KnownReporterRepository implements IKnownReporterRepository {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient = getPrismaClient()) {}
 
   async create(data: CreateKnownReporterData): Promise<KnownReporter> {
     return await this.prisma.knownReporter.create({
@@ -10,22 +11,22 @@ export class KnownReporterRepository implements IKnownReporterRepository {
     });
   }
 
-  async findByDomain(domain: string): Promise<KnownReporter | null> {
+  async findByOrgEmail(orgEmail: string): Promise<KnownReporter | null> {
     return await this.prisma.knownReporter.findUnique({
-      where: { domain }
+      where: { orgEmail }
     });
   }
 
-  async update(domain: string, data: UpdateKnownReporterData): Promise<KnownReporter> {
+  async update(orgEmail: string, data: UpdateKnownReporterData): Promise<KnownReporter> {
     return await this.prisma.knownReporter.update({
-      where: { domain },
+      where: { orgEmail },
       data
     });
   }
 
-  async updateLastSeen(domain: string): Promise<KnownReporter> {
+  async updateLastSeen(orgEmail: string): Promise<KnownReporter> {
     return await this.prisma.knownReporter.update({
-      where: { domain },
+      where: { orgEmail },
       data: {
         lastSeen: new Date()
       }

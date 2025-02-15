@@ -9,9 +9,15 @@ import { simpleParser } from "mailparser";
 
 Deno.test("parseReportAttachment", async (t) => {
   await t.step("should handle gzip by content-type", async () => {
-    const report = createTestDmarcReport("example.com");
+    const report = createTestDmarcReport({
+      reporterEmail: "reporter@example.com",
+      reporterName: "Test Reporter",
+      domain: "example.com",
+      reportId: "2024-test-001",
+      begin: new Date("2009-02-13T23:31:30.000Z"),
+      end: new Date("2009-02-14T23:31:30.000Z")
+    });
     const compressed = gzipString(report);
-    
     await parseReportAttachments([{
       content: Buffer.from(compressed),
       contentType: 'application/gzip',
@@ -20,7 +26,14 @@ Deno.test("parseReportAttachment", async (t) => {
   });
 
   await t.step("should handle gzip by filename", async () => {
-    const report = createTestDmarcReport("example.com");
+    const report = createTestDmarcReport({
+      reporterEmail: "reporter@example.com",
+      reporterName: "Test Reporter",
+      domain: "example.com",
+      reportId: "2024-test-001",
+      begin: new Date("2009-02-13T23:31:30.000Z"),
+      end: new Date("2009-02-14T23:31:30.000Z")
+    });
     const compressed = gzipString(report);
     
     await parseReportAttachments([{
@@ -31,9 +44,15 @@ Deno.test("parseReportAttachment", async (t) => {
   });
 
   await t.step("should handle gzip by magic numbers", async () => {
-    const report = createTestDmarcReport("example.com");
+    const report = createTestDmarcReport({
+      reporterEmail: "reporter@example.com",
+      reporterName: "Test Reporter",
+      domain: "example.com",
+      reportId: "2024-test-001",
+      begin: new Date("2009-02-13T23:31:30.000Z"),
+      end: new Date("2009-02-14T23:31:30.000Z")
+    });
     const compressed = gzipString(report);
-    
     await parseReportAttachments([{
       content: Buffer.from(compressed),
       contentType: 'application/octet-stream'
@@ -41,8 +60,14 @@ Deno.test("parseReportAttachment", async (t) => {
   });
 
   await t.step("should handle plain XML", async () => {
-    const report = createTestDmarcReport("example.com");
-    
+    const report = createTestDmarcReport({
+      reporterEmail: "reporter@example.com",
+      reporterName: "Test Reporter",
+      domain: "example.com",
+      reportId: "2024-test-001",
+      begin: new Date("2009-02-13T23:31:30.000Z"),
+      end: new Date("2009-02-14T23:31:30.000Z")
+    });
     await parseReportAttachments([{
       content: Buffer.from(report),
       contentType: 'application/xml',
@@ -69,7 +94,14 @@ Deno.test("parseReportAttachment", async (t) => {
 
 Deno.test("parseReportAttachments should parse a valid DMARC report", async () => {
   // Create test DMARC report
-  const report = createTestDmarcReport("example.com", "2024-test-001");
+  const report = createTestDmarcReport({
+    reporterEmail: "reporter@example.com",
+    reporterName: "Test Reporter",
+    domain: "example.com",
+    reportId: "2024-test-001",
+    begin: new Date("2009-02-13T23:31:30.000Z"),
+    end: new Date("2009-02-14T23:31:30.000Z")
+  });
   const rawEmail = createEMailWithReport(report);
   const parsedEmail = await simpleParser(rawEmail);
   const dmarcReport = await parseReportAttachments(parsedEmail.attachments);

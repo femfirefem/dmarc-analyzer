@@ -1,53 +1,63 @@
 import { KnownReporter } from "@prisma/client";
 import { IKnownReporterRepository, UpdateKnownReporterData } from "../database/repositories/types.ts";
 import { logger } from "../utils/logger.ts";
+import { MockKnownReporterRepository } from "../database/repositories/mock-known-reporter.ts";
+import { KnownReporterRepository } from "../database/repositories/known-reporter.ts";
 
 export class KnownReporterService {
-  constructor(private repository: IKnownReporterRepository) {}
+  private repository: IKnownReporterRepository;
 
-  async getOrCreateReporter(domain: string, orgName: string): Promise<KnownReporter> {
+  constructor(repository: IKnownReporterRepository | undefined = undefined) {
+    this.repository = repository ?? (
+      Deno.env.get("MOCK_DB")?.toLowerCase() === "true" ?
+      new MockKnownReporterRepository() : new KnownReporterRepository()
+    );
+  }
+
+  async getOrCreateReporter(orgEmail: string, orgName: string): Promise<KnownReporter> {
     try {
-      const existing = await this.repository.findByDomain(domain);
+      const existing = await this.repository.findByOrgEmail(orgEmail);
       if (existing) {
-        await this.repository.updateLastSeen(domain);
+        await this.repository.updateLastSeen(orgEmail);
         return existing;
       }
 
-      logger.info(`Creating new reporter record`, { domain, orgName });
+      logger.info(`Creating new reporter record`, { orgEmail, orgName });
+
       return await this.repository.create({
-        domain,
+        orgEmail,
         orgName,
         trustLevel: "UNTRUSTED",
         status: "PENDING_REVIEW"
       });
     } catch (error) {
-      logger.error(`Failed to get or create reporter`, { domain, orgName, error });
+      logger.error(`Failed to get or create reporter`, { orgEmail, orgName, error });
       throw error;
     }
   }
 
-  async validateReporter(domain: string): Promise<boolean> {
+  async validateReporter(orgEmail: string): Promise<boolean> {
     try {
-      const reporter = await this.repository.findByDomain(domain);
+      const reporter = await this.repository.findByOrgEmail(orgEmail);
       if (!reporter) return false;
 
       // Update last seen timestamp
-      await this.repository.updateLastSeen(domain);
+      await this.repository.updateLastSeen(orgEmail);
 
       // Check if reporter is allowed to send reports
       return reporter.status === "ACTIVE" &&
              reporter.trustLevel !== "UNTRUSTED";
     } catch (error) {
-      logger.error(`Failed to validate reporter`, { domain, error });
+      logger.error(`Failed to validate reporter`, { orgEmail, error });
       return false;
     }
   }
 
-  async updateReporter(domain: string, data: UpdateKnownReporterData): Promise<KnownReporter> {
+  async updateReporter(orgEmail: string, data: UpdateKnownReporterData): Promise<KnownReporter> {
     try {
-      return await this.repository.update(domain, data);
+      return await this.repository.update(orgEmail, data);
     } catch (error) {
-      logger.error(`Failed to update reporter`, { domain, data, error });
+      logger.error(`Failed to update reporter`, { orgEmail, data, error });
       throw error;
     }
   }

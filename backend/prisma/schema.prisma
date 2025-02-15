@@ -111,7 +111,7 @@ enum ReporterStatus {
 
 model KnownReporter {
   id            String           @id @default(cuid())
-  domain        String           @unique
+  orgEmail      String           @unique
   orgName       String
   firstSeen     DateTime         @default(now())
   lastSeen      DateTime         @updatedAt
@@ -122,6 +122,6 @@ model KnownReporter {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  @@index([domain])
+  @@index([orgEmail])
   @@index([status, trustLevel])
 }
