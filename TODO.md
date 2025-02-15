@@ -16,13 +16,15 @@
     - [x] Check attachment types
     - [ ] Implement spam filtering
     - [ ] Add known DMARC reporter validation
-      - [ ] Create database table for known reporters
-      - [ ] Add API to manage known reporters
-      - [ ] Implement reporter validation logic
+      - [x] Create database table for known reporters (domain, org name, first/last seen, trust level, status)
+      - [x] Create repository and service layer for reporter management
+      - [ ] Integrate reporter validation into SMTP pipeline
+      - [ ] Add API endpoints for managing known reporters
     - [ ] Implement rate limiting
-      - [ ] Add Redis for rate limit tracking
+      - [ ] Add Redis client configuration
+      - [ ] Create rate limiting service (per-IP and per-domain limits)
       - [ ] Configure limits per sender
-      - [ ] Add rate limit bypass for trusted senders 
+      - [ ] Add rate limit bypass for trusted senders
   - [x] Create testing infrastructure
     - [x] Add unit tests for parser
     - [x] Create integration tests for SMTP server
@@ -37,6 +39,10 @@
 - [x] Implement database client initialization
 - [x] Create base repository patterns
 - [ ] Add database integration tests
+  - [ ] Create test utilities for database setup/teardown
+  - [ ] Write integration tests for repositories
+  - [ ] Add end-to-end tests for full pipeline
+  - [ ] Add performance benchmarks
 - [ ] Add database indexes for performance
 - [ ] Add database backup strategy
 

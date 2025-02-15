@@ -15,14 +15,19 @@ The backend service is built using Deno and is structured into several key modul
 
 #### SMTP Server
 - Listens on port 25 for incoming DMARC reports
-- Handles email parsing and initial validation
+- Handles email parsing using `mailparser`
+- Validates sender authentication using `mailauth` (SPF, DKIM, DMARC)
+- Validates report format and metadata
 - Queues reports for processing
 
 #### Analysis Engine
-- DMARC Record Analyzer: Validates and interprets DMARC policies
-- SPF Record Analyzer: Checks SPF record compliance
-- DKIM Record Analyzer: Verifies DKIM signatures
-- Report Processors: Handles aggregate and failure reports
+- DMARC Report Parser: Validates and processes XML reports
+- Report Processors: Handles aggregate reports
+- Validation Pipeline:
+  - Subject validation
+  - Filename validation
+  - XML schema validation
+  - Metadata consistency checks
 
 #### API Layer
 - RESTful endpoints for frontend communication

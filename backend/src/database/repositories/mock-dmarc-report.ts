@@ -21,6 +21,7 @@ export class MockDmarcReportRepository implements IDmarcReportRepository {
       subdomainPolicy: data.subdomainPolicy,
       percentage: data.percentage,
       failureReporting: data.failureReporting,
+      reporterId: data.reporterId,
       records: data.records.map(record => ({
         id: Math.random().toString(),
         dmarcReportId: Math.random().toString(),

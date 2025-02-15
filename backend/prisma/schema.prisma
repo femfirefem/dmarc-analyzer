@@ -52,10 +52,15 @@ model DmarcReport {
   percentage        Int?
   failureReporting  FailureReporting?
 
+  // Reporter
+  reporter      KnownReporter?   @relation("ReporterToReport", fields: [reporterId], references: [id])
+  reporterId    String?
+
   // Relationships
   records          Record[]
 
   @@unique([reportId, orgName])
+  @@index([reporterId])
 }
 
 model Record {
@@ -88,4 +93,35 @@ model Record {
 
   @@index([sourceIp])
   @@index([headerFrom])
+}
+
+enum ReporterTrustLevel {
+  UNTRUSTED
+  LOW
+  MEDIUM
+  HIGH
+  VERIFIED
+}
+
+enum ReporterStatus {
+  ACTIVE
+  BLOCKED
+  PENDING_REVIEW
+}
+
+model KnownReporter {
+  id            String           @id @default(cuid())
+  domain        String           @unique
+  orgName       String
+  firstSeen     DateTime         @default(now())
+  lastSeen      DateTime         @updatedAt
+  trustLevel    ReporterTrustLevel @default(UNTRUSTED)
+  status        ReporterStatus   @default(PENDING_REVIEW)
+  notes         String?
+  reports       DmarcReport[]    @relation("ReporterToReport")
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([domain])
+  @@index([status, trustLevel])
 }

@@ -1,4 +1,4 @@
-import type { AlignmentMode, PolicyType, FailureReporting, AuthResult, DmarcReport } from "@prisma/client";
+import type { AlignmentMode, PolicyType, FailureReporting, AuthResult, DmarcReport, KnownReporter, ReporterTrustLevel, ReporterStatus } from "@prisma/client";
 
 export interface IDmarcReportRepository {
   create(data: CreateDmarcReportData): Promise<DmarcReport>;
@@ -20,6 +20,7 @@ export interface CreateDmarcReportData {
   subdomainPolicy?: PolicyType | null;
   percentage?: number | null;
   failureReporting?: FailureReporting | null;
+  reporterId?: string | null;
   records: {
     sourceIp: string;
     count: number;
@@ -33,4 +34,27 @@ export interface CreateDmarcReportData {
     spfDomain?: string | null;
     spfResult?: AuthResult | null;
   }[];
+}
+
+export interface CreateKnownReporterData {
+  domain: string;
+  orgName: string;
+  trustLevel?: ReporterTrustLevel;
+  status?: ReporterStatus;
+  notes?: string;
+}
+
+export interface UpdateKnownReporterData {
+  orgName?: string;
+  trustLevel?: ReporterTrustLevel;
+  status?: ReporterStatus;
+  notes?: string;
+}
+
+export interface IKnownReporterRepository {
+  create(data: CreateKnownReporterData): Promise<KnownReporter>;
+  findByDomain(domain: string): Promise<KnownReporter | null>;
+  update(domain: string, data: UpdateKnownReporterData): Promise<KnownReporter>;
+  updateLastSeen(domain: string): Promise<KnownReporter>;
+  list(): Promise<KnownReporter[]>;
 }
