@@ -48,7 +48,7 @@
     "install": "npx npm-run-all --parallel install:frontend install:backend",
     "install:frontend": "cd frontend && npm install",
     "install:backend": "cd backend && npm install",
-    "ci": "npx npm-run-all --parallel ci:frontend ci:backend",
+    "ci": "npx npm-run-all ci:backend ci:frontend",
     "ci:frontend": "cd frontend && npm ci",
     "ci:backend": "cd backend && npm ci",
     "audit": "npx npm-run-all --parallel audit:frontend audit:backend",
