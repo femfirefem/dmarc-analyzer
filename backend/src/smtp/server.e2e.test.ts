@@ -251,7 +251,6 @@ Deno.test({
 
 Deno.test({
   name: "SMTP Server Integration Tests with Reporter Validation",
-  ignore: Deno.env.get("CI") === "true", // Skip on CI
   async fn(t) {
     setLoggerLevel("ERROR");
 

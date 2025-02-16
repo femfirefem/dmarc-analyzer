@@ -7,7 +7,7 @@ import { CreateDmarcReportData, IDmarcReportRepository } from "./types.ts";
 export class DmarcReportRepository implements IDmarcReportRepository {
   constructor(private prisma: PrismaClient = getPrismaClient()) {}
 
-  async create(data: CreateDmarcReportData): Promise<DmarcReport> {
+  async create(data: CreateDmarcReportData) {
     try {
       return await this.prisma.dmarcReport.create({
         data: {
