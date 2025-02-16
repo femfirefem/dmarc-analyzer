@@ -551,5 +551,125 @@ Deno.test({
         await server.stop();
       }
     });
+
+    await t.step("should handle missing submitter in subject", async () => {
+      const reportRepository = new MockDmarcReportRepository();
+      const reportService = new DmarcReportService(reportRepository);
+      const reporterRepository = new MockKnownReporterRepository();
+      const reporterService = new KnownReporterService(reporterRepository);
+
+      const server = new DmarcSMTPServer({
+        port: TEST_PORT,
+        host: TEST_HOST,
+        closeTimeout: 100,
+        reportService,
+        reporterService,
+        validateDmarc: false,
+        strictFilename: false,
+        unknownReporterPolicy: UnknownReporterPolicy.ALLOW
+      });
+
+      await server.start();
+
+      try {
+        const client = createTransport({
+          host: TEST_HOST,
+          port: TEST_PORT,
+          secure: false
+        });
+
+        const reportBeginDate = new Date("2023-01-01T00:00:00Z");
+        const reportEndDate = new Date("2023-01-02T00:00:00Z");
+
+        // Send report without submitter in subject
+        await client.sendMail({
+          from: "dmarc@example.com",
+          to: ["dmarc-reports@yourdomain.com"],
+          subject: "Report Domain: example.com Report-ID: test-001",
+          text: "DMARC Report",
+          attachments: [
+            {
+              filename: `dmarc.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
+              content: gzipString(createTestDmarcReport({
+                reporterEmail: "dmarc@example.com",
+                reporterName: "Test Reporter",
+                domain: "example.com",
+                reportId: "test-001"
+              })),
+            },
+          ],
+        });
+
+        // Verify reporter was created without submitter
+        const reporter = await reporterRepository.findByOrgEmail("dmarc@example.com");
+        assertEquals(reporter?.submitter, null);
+
+        client.close();
+      } finally {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await server.stop();
+      }
+    });
+
+    await t.step("should handle malformed subject but valid report", async () => {
+      const reportRepository = new MockDmarcReportRepository();
+      const reportService = new DmarcReportService(reportRepository);
+      const reporterRepository = new MockKnownReporterRepository();
+      const reporterService = new KnownReporterService(reporterRepository);
+
+      const server = new DmarcSMTPServer({
+        port: TEST_PORT,
+        host: TEST_HOST,
+        closeTimeout: 100,
+        reportService,
+        reporterService,
+        validateDmarc: false,
+        strictSubject: false,
+        unknownReporterPolicy: UnknownReporterPolicy.ALLOW
+      });
+
+      await server.start();
+
+      try {
+        const client = createTransport({
+          host: TEST_HOST,
+          port: TEST_PORT,
+          secure: false
+        });
+
+        const reportBeginDate = new Date("2023-01-01T00:00:00Z");
+        const reportEndDate = new Date("2023-01-02T00:00:00Z");
+
+        // Send report with malformed subject
+        await client.sendMail({
+          from: "dmarc@example.com",
+          to: ["dmarc-reports@yourdomain.com"],
+          subject: "Invalid DMARC Report Subject",
+          text: "DMARC Report",
+          attachments: [
+            {
+              filename: `dmarc.example.com!example.com!${reportBeginDate.getTime()/1000}!${reportEndDate.getTime()/1000}.xml.gz`,
+              content: gzipString(createTestDmarcReport({
+                reporterEmail: "dmarc@example.com",
+                reporterName: "Test Reporter",
+                domain: "example.com",
+                reportId: "test-001"
+              })),
+            },
+          ],
+        });
+
+        // Verify reporter was created using report metadata
+        const reporter = await reporterRepository.findByOrgEmail("dmarc@example.com");
+        assertEquals(reporter?.orgEmail, "dmarc@example.com");
+        assertEquals(reporter?.orgName, "Test Reporter");
+        assertEquals(reporter?.submitter, null);
+
+        client.close();
+      } finally {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await server.stop();
+      }
+    });
   }
 });
