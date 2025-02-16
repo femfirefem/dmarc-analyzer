@@ -42,7 +42,18 @@ export class HttpServer {
     // Add CORS if configured
     if (options.cors) {
       this.app.use(oakCors({
-        origin: options.cors.origin,
+        origin: (origin) => {
+          // If no origin is set in options, or if the request has no origin, allow it
+          if (!options.cors?.origin || !origin) return true;
+          
+          // Check if origin is in allowed list
+          const allowed = Array.isArray(options.cors.origin) 
+            ? options.cors.origin.includes(origin)
+            : options.cors.origin === origin;
+            
+          // Return null for non-allowed origins to block CORS
+          return allowed ? [origin] : [];
+        },
         methods: options.cors.methods,
       }));
     }
