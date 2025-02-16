@@ -1,10 +1,15 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy frontend source code
-COPY frontend/ .
+# Copy source code
+COPY package.json .
+COPY package-lock.json .
+COPY prisma/ prisma/
+COPY frontend/ frontend/
+
+WORKDIR /app/frontend
 
 # Install dependencies
 RUN npm install
@@ -30,8 +35,8 @@ RUN npx playwright install --with-deps
 COPY frontend/ .
 
 # Copy build output from builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/build ./build
+COPY --from=builder /app/frontend/node_modules ./node_modules
+COPY --from=builder /app/frontend/build ./build
 
 RUN chown -R pwuser:pwuser /app
 
@@ -41,19 +46,19 @@ USER pwuser
 CMD ["npm", "run", "test:e2e"]
 
 # Production stage
-FROM denoland/deno:distroless-2.1.9
+FROM oven/bun:1.2-alpine
 
 WORKDIR /app
 
 # Copy build output from builder
-COPY --from=builder /app/build ./build
-
-# The distroless image runs as non-root by default
-USER nonroot
+COPY --from=builder /app/frontend/package.json ./package.json
+COPY --from=builder /app/frontend/package-lock.json ./package-lock.json
+COPY --from=builder /app/frontend/node_modules ./node_modules
+COPY --from=builder /app/frontend/build ./build
 
 # Expose port 5173 for web interface
 EXPOSE 5173
 
 # Run the server
 ENV PORT=5173
-CMD ["run", "--allow-net", "--allow-read", "--allow-env", "build/index.js"]
+CMD ["bun", "./build"]

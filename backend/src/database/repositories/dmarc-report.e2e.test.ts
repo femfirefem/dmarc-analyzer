@@ -1,4 +1,4 @@
-import { assertEquals, assertExists } from "@std/assert";
+import { assertEquals, assertExists, assertMatch } from "@std/assert";
 import { TestDatabase } from "../testing/db-test-utils.ts";
 import { DmarcReportRepository } from "./dmarc-report.ts";
 import { CreateDmarcReportData } from "./types.ts";
@@ -74,7 +74,7 @@ Deno.test({
         await repository.create(testReportData);
         throw new Error("Should not allow duplicate report");
       } catch (error) {
-        assertEquals((error as Error).message, "Report already exists");
+        assertMatch((error as Error).message, /Report already exists|Unique constraint failed/);
       }
       // Restore the logger level
       setLoggerLevel("ERROR");

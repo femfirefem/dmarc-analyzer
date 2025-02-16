@@ -1,4 +1,4 @@
-import { PrismaClient, DmarcReport } from "@prisma/client";
+import type { PrismaClient, DmarcReport } from "@prisma/client";
 import { getPrismaClient } from "../client.ts";
 import { logger } from "../../utils/logger.ts";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";

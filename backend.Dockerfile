@@ -7,11 +7,15 @@ RUN apt-get update -y && apt-get install -y openssl
 WORKDIR /app
 
 # Copy source code
-COPY backend/ .
+COPY package.json .
+COPY package-lock.json .
+COPY prisma/ prisma/
+COPY backend/ backend/
+
+WORKDIR /app/backend
 
 # Install dependencies
 RUN deno install
-
 
 FROM builder AS test-base
 ENV MOCK_DB true
@@ -61,5 +65,5 @@ USER nonroot
 EXPOSE 25 3000
 
 # Run the server
-# CMD ["run", "--cached-only", "--allow-net", "--allow-sys", "--allow-read", "--allow-ffi", "--allow-env", "src/main.ts"]
+# CMD ["run", "--cached-only", "--allow-net", "--allow-sys", "--allow-env", "--allow-read", "--allow-ffi", "src/main.ts"]
 CMD ["./dmarc-analyzer"]

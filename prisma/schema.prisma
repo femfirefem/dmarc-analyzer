@@ -1,0 +1,250 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator backend_client {
+  provider        = "prisma-client-js"
+  // output          = "../backend/node_modules/.prisma/client"
+  output          = "../backend/node_modules/.deno/@prisma+client@6.3.1/node_modules/.prisma/client"
+  previewFeatures = ["deno"]
+}
+
+generator frontend_client {
+  provider        = "prisma-client-js"
+  output          = "../frontend/node_modules/.prisma/client"
+}
+
+enum AlignmentMode {
+  RELAXED  @map("r")
+  STRICT   @map("s")
+}
+
+enum PolicyType {
+  NONE
+  QUARANTINE
+  REJECT
+}
+
+enum FailureReporting {
+  ZERO  @map("0")
+  ONE   @map("1")
+  D     @map("d")
+  S     @map("s")
+}
+
+enum AuthResult {
+  PASS
+  FAIL
+}
+
+model DmarcReport {
+  id            String   @id @default(uuid())
+  mailDate      DateTime // When the email was sent
+  processedDate DateTime @default(now()) // When we processed the report
+  
+  // Report Metadata
+  reportId      String
+  orgName       String
+  orgEmail      String?
+  beginDate     DateTime
+  endDate       DateTime
+  
+  // Policy Published
+  domain            String
+  adkim             AlignmentMode?
+  aspf              AlignmentMode?
+  policy            PolicyType
+  subdomainPolicy   PolicyType?
+  percentage        Int?
+  failureReporting  FailureReporting?
+
+  // Reporter
+  reporter      KnownReporter?   @relation("ReporterToReport", fields: [reporterId], references: [id])
+  reporterId    String?
+
+  // Relationships
+  records          Record[]
+
+  @@unique([reportId, orgName])
+  @@index([reporterId])
+}
+
+model Record {
+  id            String   @id @default(uuid())
+  
+  // Source IP Info
+  sourceIp      String
+  count         Int
+  
+  // Policy Evaluated
+  disposition   PolicyType
+  dkim         AuthResult
+  spf          AuthResult
+  
+  // Identifiers
+  headerFrom    String
+  
+  // DKIM Authentication
+  dkimDomain   String?
+  dkimResult   AuthResult?
+  dkimSelector String?
+  
+  // SPF Authentication
+  spfDomain    String?
+  spfResult    AuthResult?
+  
+  // Relationships
+  report       DmarcReport @relation(fields: [reportId], references: [id])
+  reportId     String
+
+  @@index([sourceIp])
+  @@index([headerFrom])
+}
+
+enum ReporterTrustLevel {
+  UNTRUSTED
+  LOW
+  MEDIUM
+  HIGH
+  VERIFIED
+}
+
+enum ReporterStatus {
+  ACTIVE
+  BLOCKED
+  PENDING_REVIEW
+}
+
+model KnownReporter {
+  id            String           @id @default(cuid())
+  orgEmail      String           @unique
+  orgName       String
+  submitter     String?          // Optional tracking of submitter
+  firstSeen     DateTime         @default(now())
+  lastSeen      DateTime         @updatedAt
+  trustLevel    ReporterTrustLevel @default(UNTRUSTED)
+  status        ReporterStatus   @default(PENDING_REVIEW)
+  notes         String?
+  reports       DmarcReport[]    @relation("ReporterToReport")
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([orgEmail])
+  @@index([status, trustLevel])
+}
+
+// Authentication
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole        @default(USER)
+  
+  accounts      Account[]
+  sessions      Session[]
+
+  // Optional for WebAuthn support
+  Authenticator Authenticator[]
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  domains       DomainOwnership[]
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@id([userId, credentialID])
+}
+
+model DomainOwnership {
+  id                String             @id @default(cuid())
+  domain            String
+  user              User               @relation(fields: [userId], references: [id])
+  userId            String
+  verificationStatus VerificationStatus @default(PENDING)
+  verificationMethod VerificationMethod
+  verificationToken String
+  verifiedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@unique([domain, userId])
+  @@index([domain])
+  @@index([userId])
+}
+
+enum VerificationMethod {
+  DNS_TXT
+  EMAIL
+  FILE
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+}

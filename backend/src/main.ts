@@ -43,7 +43,7 @@ if (import.meta.main) {
   const signals: Deno.Signal[] = ["SIGINT", "SIGTERM"];
   for (const signal of signals) {
     Deno.addSignalListener(signal, async () => {
-      logger.info(`\nReceived ${signal}, shutting down...`);
+      logger.info(`Received ${signal}, shutting down...`);
       await Promise.all([smtpServer.stop(), httpServer.stop()]);
       Deno.exit(0);
     });
