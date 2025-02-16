@@ -51,9 +51,9 @@
   - [x] Record validation
   - [x] Policy evaluation
   - [x] Syntax checking
-- [ ] Implement SPF record analyzer
-  - [ ] Record validation
-  - [ ] Policy evaluation
+- [x] Implement SPF record analyzer
+  - [x] Record validation
+  - [x] Policy evaluation
 - [ ] Implement DKIM record analyzer
   - [ ] Signature validation
   - [ ] Key retrieval

@@ -1,5 +1,3 @@
-import { logger } from "../utils/logger.ts";
-
 export type DmarcAlignment = "s" | "r";
 export type DmarcPolicy = "none" | "quarantine" | "reject";
 
