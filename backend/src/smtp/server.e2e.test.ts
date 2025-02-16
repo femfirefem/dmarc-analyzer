@@ -167,8 +167,8 @@ Deno.test({
     
     // Cleanup
     await t.step("should stop SMTP server", async () => {
-      // NOTE: Waiting 100ms to prevent race condition bug that leaks a setTimeout
-      await new Promise(resolve => setTimeout(resolve, 100)); 
+      // NOTE: Waiting 150ms to prevent race condition bug that leaks a setTimeout
+      await new Promise(resolve => setTimeout(resolve, 150)); 
       
       await server.stop();
     });
@@ -491,6 +491,64 @@ Deno.test({
         client.close();
       } finally {
         await allowServer.stop();
+      }
+    });
+
+    await t.step("should track original submitter for new reporters", async () => {
+      const reportRepository = new MockDmarcReportRepository();
+      const reportService = new DmarcReportService(reportRepository);
+      const reporterRepository = new MockKnownReporterRepository();
+      const reporterService = new KnownReporterService(reporterRepository);
+
+      const server = new DmarcSMTPServer({
+        port: TEST_PORT,
+        host: TEST_HOST,
+        closeTimeout: 100,
+        reportService,
+        reporterService,
+        validateDmarc: false,
+        unknownReporterPolicy: UnknownReporterPolicy.ALLOW
+      });
+
+      await server.start();
+
+      try {
+        const client = createTransport({
+          host: TEST_HOST,
+          port: TEST_PORT,
+          secure: false
+        });
+
+        // Send first report
+        await client.sendMail(createTestDmarcEmail({
+          reporterEmail: "dmarc@example.com",
+          reporterName: "Test Reporter",
+          domain: "example.com",
+          reportId: "test-001",
+          submitter: "reports.example.com"
+        }));
+
+        // Verify submitter was recorded
+        const reporter = await reporterRepository.findByOrgEmail("dmarc@example.com");
+        assertEquals(reporter?.submitter, "reports.example.com");
+
+        // Send second report with different submitter
+        await client.sendMail(createTestDmarcEmail({
+          reporterEmail: "dmarc@example.com",
+          reporterName: "Test Reporter",
+          domain: "example.com",
+          reportId: "test-002",
+          submitter: "different.example.com"
+        }));
+
+        // Verify submitter hasn't changed
+        const updatedReporter = await reporterRepository.findByOrgEmail("dmarc@example.com");
+        assertEquals(updatedReporter?.submitter, "reports.example.com");
+
+        client.close();
+      } finally {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await server.stop();
       }
     });
   }

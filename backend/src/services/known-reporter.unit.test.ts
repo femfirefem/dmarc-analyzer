@@ -8,31 +8,83 @@ Deno.test("KnownReporterService", async (t) => {
   setLoggerLevel("ERROR");
 
   await t.step("getOrCreateReporter", async (t) => {
-    await t.step("should create new reporter if not exists", async () => {
+    await t.step("should create new reporter with submitter if not exists", async () => {
       const repository = new MockKnownReporterRepository();
       const service = new KnownReporterService(repository);
 
-      const reporter = await service.getOrCreateReporter("test@example.com", "Test Org");
+      const reporter = await service.getOrCreateReporter(
+        "test@example.com",
+        "Test Org",
+        "reports.example.com"
+      );
 
       assertEquals(reporter.orgEmail, "test@example.com");
       assertEquals(reporter.orgName, "Test Org");
+      assertEquals(reporter.submitter, "reports.example.com");
       assertEquals(reporter.trustLevel, "UNTRUSTED");
       assertEquals(reporter.status, "PENDING_REVIEW");
     });
 
-    await t.step("should return existing reporter if found", async () => {
+    await t.step("should not update submitter for existing reporter", async () => {
       const repository = new MockKnownReporterRepository();
       const service = new KnownReporterService(repository);
 
-      const created = await service.getOrCreateReporter("test@example.com", "Test Org");
-      const found = await service.getOrCreateReporter("test@example.com", "Different Name");
+      // Create initial reporter
+      const created = await service.getOrCreateReporter(
+        "test@example.com",
+        "Test Org",
+        "reports.example.com"
+      );
+
+      // Try to update with different submitter
+      const found = await service.getOrCreateReporter(
+        "test@example.com",
+        "Test Org",
+        "different.example.com"
+      );
 
       assertEquals(found.id, created.id);
-      assertEquals(found.orgName, created.orgName); // Should not update existing name
+      assertEquals(found.submitter, "reports.example.com"); // Should keep original submitter
+    });
+
+    await t.step("should create reporter without submitter", async () => {
+      const repository = new MockKnownReporterRepository();
+      const service = new KnownReporterService(repository);
+
+      const reporter = await service.getOrCreateReporter(
+        "test@example.com",
+        "Test Org"
+      );
+
+      assertEquals(reporter.orgEmail, "test@example.com");
+      assertEquals(reporter.orgName, "Test Org");
+      assertEquals(reporter.submitter, null);
     });
   });
 
   await t.step("validateReporter", async (t) => {
+    await t.step("should validate reporter by orgEmail only", async () => {
+      const repository = new MockKnownReporterRepository();
+      const service = new KnownReporterService(repository);
+
+      // Create reporter with submitter
+      await service.getOrCreateReporter(
+        "test@example.com",
+        "Test Org",
+        "reports.example.com"
+      );
+
+      // Update to trusted status
+      await service.updateReporter("test@example.com", {
+        trustLevel: "HIGH",
+        status: "ACTIVE"
+      });
+
+      // Should validate regardless of submitter
+      const isValid = await service.validateReporter("test@example.com");
+      assertEquals(isValid, true);
+    });
+
     await t.step("should return false for unknown reporter", async () => {
       const repository = new MockKnownReporterRepository();
       const service = new KnownReporterService(repository);
@@ -80,12 +132,19 @@ Deno.test("KnownReporterService", async (t) => {
   });
 
   await t.step("updateReporter", async (t) => {
-    await t.step("should update reporter fields", async () => {
+    await t.step("should update reporter fields except submitter", async () => {
       const repository = new MockKnownReporterRepository();
       const service = new KnownReporterService(repository);
 
-      await service.getOrCreateReporter("test.com", "Test Org");
-      const updated = await service.updateReporter("test.com", {
+      // Create reporter with submitter
+      await service.getOrCreateReporter(
+        "test@example.com",
+        "Test Org",
+        "reports.example.com"
+      );
+
+      // Update fields
+      const updated = await service.updateReporter("test@example.com", {
         orgName: "New Name",
         trustLevel: "HIGH",
         status: "ACTIVE",
@@ -96,6 +155,7 @@ Deno.test("KnownReporterService", async (t) => {
       assertEquals(updated.trustLevel, "HIGH");
       assertEquals(updated.status, "ACTIVE");
       assertEquals(updated.notes, "Test note");
+      assertEquals(updated.submitter, "reports.example.com"); // Should keep original submitter
     });
 
     await t.step("should throw error for unknown domain", async () => {
