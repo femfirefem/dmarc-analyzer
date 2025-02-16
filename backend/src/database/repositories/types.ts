@@ -39,6 +39,7 @@ export interface CreateDmarcReportData {
 export interface CreateKnownReporterData {
   orgEmail: string;
   orgName: string;
+  submitter?: string;
   trustLevel?: ReporterTrustLevel;
   status?: ReporterStatus;
   notes?: string;

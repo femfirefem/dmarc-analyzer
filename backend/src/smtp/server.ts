@@ -230,7 +230,7 @@ export class DmarcSMTPServer {
     }
   }
 
-  private async validateReporter(session: SMTPServerSession, dmarcReport: DmarcReport) {
+  private async validateReporter(session: SMTPServerSession, subject: DmarcEmailSubject | null, dmarcReport: DmarcReport) {
     const orgEmail = dmarcReport.reportMetadata.email;
     const isValidReporter = await this.reporterService.validateReporter(orgEmail);
     
@@ -241,6 +241,7 @@ export class DmarcSMTPServer {
           logger.warn('Rejected email from untrusted DMARC reporter', {
             sessionId: session.id,
             orgEmail,
+            submitter: subject?.submitter,
             remoteAddress: session.remoteAddress,
           });
           throw new CustomSMTPError('Untrusted DMARC reporter');
@@ -249,6 +250,7 @@ export class DmarcSMTPServer {
           logger.warn('Ignoring email from unknown DMARC reporter', {
             sessionId: session.id,
             orgEmail,
+            submitter: subject?.submitter,
             remoteAddress: session.remoteAddress,
           });
           break;
@@ -257,12 +259,14 @@ export class DmarcSMTPServer {
           logger.info('Allowing email from unknown DMARC reporter', {
             sessionId: session.id,
             orgEmail,
+            submitter: subject?.submitter,
             remoteAddress: session.remoteAddress,
           });
           // Create reporter record with UNTRUSTED status
           await this.reporterService.getOrCreateReporter(
             orgEmail,
-            dmarcReport.reportMetadata.orgName
+            dmarcReport.reportMetadata.orgName,
+            subject?.submitter  // Pass submitter only on creation
           );
           break;
       }
@@ -322,11 +326,12 @@ export class DmarcSMTPServer {
         throw new CustomSMTPError('Sender does not match DMARC report email');
       }
 
+      const subject = parseDmarcReportSubject(parsedEmail.subject);
+
       if (this.reporterService) {
-        await this.validateReporter(session, report);
+        await this.validateReporter(session, subject, report);
       }
 
-      const subject = parseDmarcReportSubject(parsedEmail.subject);
       if (!subject) {
         logger.debug('DMARC report subject validation failed', {
           sessionId: session.id,

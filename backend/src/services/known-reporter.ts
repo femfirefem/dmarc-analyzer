@@ -14,7 +14,7 @@ export class KnownReporterService {
     );
   }
 
-  async getOrCreateReporter(orgEmail: string, orgName: string): Promise<KnownReporter> {
+  async getOrCreateReporter(orgEmail: string, orgName: string, submitter?: string): Promise<KnownReporter> {
     try {
       const existing = await this.repository.findByOrgEmail(orgEmail);
       if (existing) {
@@ -22,16 +22,26 @@ export class KnownReporterService {
         return existing;
       }
 
-      logger.info(`Creating new reporter record`, { orgEmail, orgName });
+      logger.debug(`Creating new reporter record`, { 
+        orgEmail, 
+        orgName,
+        submitter 
+      });
 
       return await this.repository.create({
         orgEmail,
         orgName,
+        submitter,  // Only set on first creation
         trustLevel: "UNTRUSTED",
         status: "PENDING_REVIEW"
       });
     } catch (error) {
-      logger.error(`Failed to get or create reporter`, { orgEmail, orgName, error });
+      logger.error(`Failed to get or create reporter`, { 
+        orgEmail, 
+        orgName,
+        submitter,
+        error 
+      });
       throw error;
     }
   }

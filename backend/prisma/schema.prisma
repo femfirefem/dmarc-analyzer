@@ -113,6 +113,7 @@ model KnownReporter {
   id            String           @id @default(cuid())
   orgEmail      String           @unique
   orgName       String
+  submitter     String?          // Optional tracking of submitter
   firstSeen     DateTime         @default(now())
   lastSeen      DateTime         @updatedAt
   trustLevel    ReporterTrustLevel @default(UNTRUSTED)

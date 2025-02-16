@@ -9,6 +9,7 @@ export class MockKnownReporterRepository implements IKnownReporterRepository {
       id: Math.random().toString(),
       orgEmail: data.orgEmail,
       orgName: data.orgName,
+      submitter: data.submitter ?? null,
       firstSeen: new Date(),
       lastSeen: new Date(),
       trustLevel: data.trustLevel ?? "UNTRUSTED",
