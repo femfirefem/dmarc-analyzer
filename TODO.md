@@ -18,7 +18,7 @@
     - [ ] Add known DMARC reporter validation
       - [x] Create database table for known reporters (domain, org name, first/last seen, trust level, status)
       - [x] Create repository and service layer for reporter management
-      - [ ] Integrate reporter validation into SMTP pipeline
+      - [x] Integrate reporter validation into SMTP pipeline
       - [ ] Add API endpoints for managing known reporters
     - [ ] Implement rate limiting
       - [ ] Add Redis client configuration
@@ -38,10 +38,10 @@
 - [x] Set up database migrations
 - [x] Implement database client initialization
 - [x] Create base repository patterns
-- [ ] Add database integration tests
-  - [ ] Create test utilities for database setup/teardown
-  - [ ] Write integration tests for repositories
-  - [ ] Add end-to-end tests for full pipeline
+- [x] Add database integration tests
+  - [x] Create test utilities for database setup/teardown
+  - [x] Write integration tests for repositories
+  - [x] Add end-to-end tests for full pipeline
   - [ ] Add performance benchmarks
 - [ ] Add database indexes for performance
 - [ ] Add database backup strategy
@@ -54,9 +54,9 @@
 - [x] Implement SPF record analyzer
   - [x] Record validation
   - [x] Policy evaluation
-- [ ] Implement DKIM record analyzer
-  - [ ] Signature validation
-  - [ ] Key retrieval
+- [x] Implement DKIM record analyzer
+  - [x] Signature validation
+  - [x] Key retrieval
 
 ## Phase 2: Analysis & Processing
 
