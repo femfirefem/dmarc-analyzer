@@ -30,13 +30,14 @@ jobs:
 
       - name: Get installed Playwright version
         run: cd frontend && echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('./package-lock.json').packages['node_modules/@playwright/test'].version)")" >> $GITHUB_ENV
+        # Sets PLAYWRIGHT_VERSION for next step
 
       - name: Cache playwright binaries
         uses: actions/cache@v3
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }} # Variable set in previous step
 
       - name: Install dependencies
         run: npm run ci

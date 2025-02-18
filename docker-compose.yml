@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -9,7 +7,7 @@ services:
       - "25:25"
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://dmarc:dmarc_password@db:5432/dmarc_analyzer
+      - DATABASE_URL=postgresql://dmarcanalyzer:dmarcanalyzer@db:5432/dmarcanalyzer
       - NODE_ENV=production
     depends_on:
       - db
@@ -34,9 +32,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=dmarc
-      - POSTGRES_PASSWORD=dmarc_password
-      - POSTGRES_DB=dmarc_analyzer
+      - POSTGRES_USER=dmarcanalyzer
+      - POSTGRES_PASSWORD=dmarcanalyzer
+      - POSTGRES_DB=dmarcanalyzer
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -47,4 +45,4 @@ volumes:
 
 networks:
   dmarc-network:
-    driver: bridge 
+    driver: bridge
