@@ -18,7 +18,7 @@ WORKDIR /app/backend
 RUN deno install
 
 FROM builder AS test-base
-ENV MOCK_DB true
+ENV MOCK_DB=true
 
 # Cache test dependencies
 RUN deno cache src/**/*.test.ts
@@ -46,7 +46,7 @@ RUN deno compile --output /app/dmarc-analyzer --allow-net --allow-sys --allow-en
 # Production stage
 #FROM denoland/deno:distroless-${DENO_VERSION}
 FROM gcr.io/distroless/cc
-ENV DENO_DIR /deno-dir/
+ENV DENO_DIR=/deno-dir/
 
 WORKDIR /app
 

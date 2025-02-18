@@ -18,7 +18,6 @@ class CustomError extends CredentialsSignin {
 }
 
 export const { handle, signIn, signOut } = SvelteKitAuth({
-  debug: true,
   secret: env.AUTH_SECRET,
   trustHost: true,
   adapter: PrismaAdapter(prisma),

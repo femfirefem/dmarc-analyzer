@@ -320,8 +320,6 @@ export class DmarcSMTPServer {
 
       // Ensure session fromMail matches orgEmail
       const fromMail = session.envelope?.mailFrom ? session.envelope.mailFrom.address : undefined;
-      console.log("fromMail", fromMail);
-      console.log("report.reportMetadata.email", report.reportMetadata.email);
       if (fromMail !== report.reportMetadata.email) {
         throw new CustomSMTPError('Sender does not match DMARC report email');
       }
