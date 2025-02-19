@@ -50,7 +50,7 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npm run test:ci:postgres
+        run: AUTH_SECRET=test npm run test:ci:postgres
 
       - name: Test Report
         uses: dorny/test-reporter@v1
