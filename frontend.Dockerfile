@@ -21,7 +21,7 @@ RUN npm run build
 FROM builder AS unit-test
 
 # Run unit tests
-CMD ["npm", "run", "test:unit", "--", "--run"]
+CMD ["npm", "run", "test:unit"]
 
 # E2E test stage
 FROM mcr.microsoft.com/playwright:v1.50.1-noble AS e2e-test
