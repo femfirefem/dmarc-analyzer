@@ -11,7 +11,7 @@ npx @databases/pg-test start
 DATABASE_URL="postgres://dmarc-analyzer@localhost:65432/dmarc-analyzer"
 
 # Run migrations
-DATABASE_URL=$DATABASE_URL npx prisma db push
+DATABASE_URL=$DATABASE_URL npx prisma@6.3.1 db push
 
 # Go back to the original directory before running the command
 popd
