@@ -39,7 +39,7 @@
     "test:e2e:backend": "cd backend && npm run test:e2e",
     "test:e2e-mocked:backend": "MOCK_DB=true npm run test:e2e:backend",
     "test:e2e-postgres:backend": "./scripts/run-with-pg-test.sh npm run test:e2e:backend",
-    "test:ci": "npx npm-run-all --parallel test:ci:frontend test:ci:backend",
+    "test:ci": "npx npm-run-all test:ci:backend test:ci:frontend",
     "test:ci:frontend": "cd frontend && npm run test:ci",
     "test:ci:backend": "cd backend && npm run test:ci",
     "test:ci:mocked": "MOCK_DB=true npm run test:ci",

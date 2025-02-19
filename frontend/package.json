@@ -16,7 +16,7 @@
 		"test:unit": "npx vitest@3.0.6 --run",
 		"test:e2e": "npx playwright@1.50.1 test",
 		"test:ci": "npx npm-run-all --parallel test:ci:unit test:ci:e2e",
-		"test:ci:unit": "npx vitest@3.0.6 run --reporter=junit --outputFile=frontend-unit-test-results.xml",
+		"test:ci:unit": "npx vitest@3.0.6 --run --reporter=junit --outputFile=frontend-unit-test-results.xml",
 		"test:ci:e2e": "PLAYWRIGHT_JUNIT_OUTPUT_FILE=frontend-e2e-test-results.xml npx playwright@1.50.1 test --reporter=junit",
 		"install": "npm run prisma:generate",
 		"prisma:generate": "cd .. && npx prisma@6.3.1 generate",
