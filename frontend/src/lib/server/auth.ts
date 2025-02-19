@@ -7,8 +7,10 @@ import { signInSchema } from "$lib/zod"
 import { ZodError } from "zod"
 import * as argon2 from "@node-rs/argon2"
 import { env } from "$env/dynamic/private"
+import { building } from "$app/environment"
 
-if (!env.AUTH_SECRET) throw new Error("AUTH_SECRET is not set");
+if (!building && !env.AUTH_SECRET)
+  throw new Error("AUTH_SECRET is not set");
 
 class CustomError extends CredentialsSignin {
   code = "validation_error";
